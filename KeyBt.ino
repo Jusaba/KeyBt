@@ -95,7 +95,8 @@ pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
     Serial.println("Detectado boton");
     if (!lBotonIn)
     {
-        cSalida = "mensaje-:-sirena-:-Flash-:-1-:-1-:-1";
+        cSalida = "telegram-:-Julian-:-Boton On";
+        //cSalida = "mensaje-:-sirena-:-Flash-:-1-:-1-:-1";
       	MensajeServidor(cSalida);			
     }
     lBotonIn=1;
@@ -103,7 +104,8 @@ pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
     Serial.println("Boton no detectado");
     if (lBotonIn)
     {
-        cSalida = "mensaje-:-sirena-:-Flash-:-2-:-1-:-1";
+        cSalida = "telegram-:-Julian-:-Boton Off";
+        //cSalida = "mensaje-:-sirena-:-Flash-:-2-:-1-:-1";
       	MensajeServidor(cSalida);			
     }    
     lBotonIn = 0;
