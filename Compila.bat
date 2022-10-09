@@ -1,0 +1,1 @@
+arduino-cli compile -b esp32:esp32:esp32wrover:PartitionScheme=huge_app,FlashMode=dio,DebugLevel=none,UploadSpeed=115200  -e -v
