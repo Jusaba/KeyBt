@@ -1,0 +1,1 @@
+arduino-cli monitor -p %1 -c baudrate=115200  -c bits=8 -c parity=none -c stop_bits=1 -c dtr=off -c rts=off

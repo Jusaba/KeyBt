@@ -1,1 +1,1 @@
-arduino-cli compile -b esp32:esp32:esp32cam:FlashMode=qio  -e -v
+arduino-cli compile -b esp32:esp32:esp32cam  -e -v

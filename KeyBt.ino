@@ -27,7 +27,7 @@ void setup() {
   EEPROM.begin(128);                                //Reservamos zona de EEPROM
   //BorraDatosEprom ( 0, 128 );                     //Borramos n bytes empezando en la posicion 0   
 
-  pinMode (LED_BUILTIN, OUTPUT);
+  pinMode (PinLed, OUTPUT);
   pinMode(PinReset, INPUT_PULLUP);                        //Configuramos el pin de reset como entrada
 
     if ( LeeByteEprom ( FlagConfiguracion ) == 0 )            //Comprobamos si el Flag de configuracion esta a 0
@@ -54,8 +54,18 @@ void setup() {
                 lHomeKit = aCfg.lHomeKit;
                 lWebSocket = aCfg.lWebSocket;
                 lEstadisticas = aCfg.lEstadisticas;
+                #ifdef KeySlave
+                  if ( (cDispositivo).indexOf("_") > 0  )
+                  { 
+                    int nPos_ = (cDispositivo).indexOf("_");
+                    cDispositivoRemoto = ((cDispositivo).substring(0, nPos_))+"m";
+                    Serial.println("--------------------------");
+                    Serial.println(cDispositivoRemoto);
+                    Serial.println("--------------------------");
+                  }
+                #endif  
 
-
+                nTiempoTestbtn = TiempoTestbtnOff;
 
 
                 if ( lEstadisticas )                  //Si están habilitadas las estadisticas, actualizamos el numero de inicios
@@ -65,16 +75,57 @@ void setup() {
             }
         } 
     }
+
 }
 
   void loop ()
   {
     
 
-      /*----------------
+    /*----------------
     Comprobacion Reset
     ------------------*/
     //TestBtnReset (PinReset);
+
+    /*----------------
+    Comprobacion 
+    ------------------*/
+    if ( millis() > nMiliSegundosTestbtn + nTiempoTestbtn )
+    {
+
+      Scan();
+      if (TestCambioEstadoLocal(lBoton))
+      {
+        Serial.println("*************** Cambio de estado ");
+      }
+      nMiliSegundosTestbtn = millis();
+/*
+      TestCambioEstado();                         //Comprobamos si hay cambio de estado
+
+      if ( GetEstado () )                         //Si  Baliza detecta el KeyBt
+      {
+        nTiempoTestbtn = TiempoTestbtnOn;         //Establecemos un tiempo de escaneo largo, no importa si tarda en detectar que no hay KeyBt para conectar la alarma
+        if (GetKey())
+        {
+          EnciendeLed();
+        }else{
+          FlashLed();
+        }  
+      }else{                                      //SI no detecta
+        nTiempoTestbtn = TiempoTestbtnOff;        //Establecemos un tiempo corto de escaneo para que la baliza desconecta la alarma nada mas detectar el KeyBt siendo ideal que lo haga antes de abrir la puerta
+        ApagaLed();
+      }
+      lBoton=0;
+	    #ifdef KeyMaster
+		    lBotonRemoto = 0;
+	    #endif
+      nMiliSegundosTestbtn = millis();
+      Serial.print(nTiempoTestbtn);
+      Serial.print(" ");
+      Serial.print(nMiliSegundosTestbtn);
+      Serial.println ("   Scan Bt");
+*/
+    }
 
     /*----------------
     Comprobacion Conexion
@@ -87,30 +138,8 @@ void setup() {
               EnciendeLed();                          //Encendemos el led para indicar que se comprueba la conexion
           #endif    
 
-BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
-pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
 
-  if (lBoton)
-  {
-    Serial.println("Detectado boton");
-    if (!lBotonIn)
-    {
-        cSalida = "telegram-:-Julian-:-Boton On";
-        //cSalida = "mensaje-:-sirena-:-Flash-:-1-:-1-:-1";
-      	MensajeServidor(cSalida);			
-    }
-    lBotonIn=1;
-  }else{
-    Serial.println("Boton no detectado");
-    if (lBotonIn)
-    {
-        cSalida = "telegram-:-Julian-:-Boton Off";
-        //cSalida = "mensaje-:-sirena-:-Flash-:-2-:-1-:-1";
-      	MensajeServidor(cSalida);			
-    }    
-    lBotonIn = 0;
-  }
-  lBoton=0;
+  
 
 
         nMiliSegundosTest = millis();
@@ -156,7 +185,36 @@ pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
         Serial.println(oMensaje.Mensaje);
       #endif  
 
-
+   		#ifdef KeyMaster
+        if (oMensaje.Mensaje == "KeyOn")							//Si se recibe 'Change', cambia el estado de PinSalida 
+	  		{	
+            nContador = 0;
+            lBotonRemoto = 1;
+        }
+			#endif
+      if (oMensaje.Mensaje == "GetKey")							//
+	  	{	  
+          if (GetEstado())
+          {
+            if ( GetKey() )
+            {
+              cSalida = "Key detectado en esta baliza"; 
+            }else{
+              cSalida = "Key detectado en el sistema pero no en esta baliza ";
+            }
+          }else{
+            #ifdef KeyMaster
+              cSalida = "Key no detectado en el sistema";
+            #endif  
+            #ifdef KeySlave
+              cSalida = "Key no detectado en esta baliza";             
+            #endif  
+          }  
+  				oMensaje.Mensaje = cSalida;								//Confeccionamos el mensaje a enviar hacia el servidor	
+	  			oMensaje.Destinatario = oMensaje.Remitente;
+		  		EnviaMensaje(oMensaje);									//Y lo enviamos
+          cSalida = String(' ');                    //Limpiamos cSalida para no actualizar valor      }
+      }
     /*----------------
       Actualizacion ultimo valor
       ------------------*/
