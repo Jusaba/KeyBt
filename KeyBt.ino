@@ -90,6 +90,13 @@ void setup() {
     /*----------------
     Comprobacion 
     ------------------*/
+    #ifdef KeyMaster
+      if ( millis() > nMiliSegundosTestRemoto + TiempoTestbtnOnRemoto )
+      {
+        lBotonRemoto = 0;
+        nMiliSegundosTestRemoto = millis();
+      }
+    #endif
     if ( millis() > nMiliSegundosTestbtn + nTiempoTestbtn )
     {
 
@@ -189,6 +196,7 @@ void setup() {
         if (oMensaje.Mensaje == "KeyOn")							//Si se recibe 'Change', cambia el estado de PinSalida 
 	  		{	
             nContador = 0;
+            nMiliSegundosTestRemoto = millis();            
             lBotonRemoto = 1;
         }
 			#endif

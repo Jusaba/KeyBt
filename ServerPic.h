@@ -88,11 +88,15 @@
 	//----------------------------
 	//Declaracion de variables PARTICULARES
 	//----------------------------
-  	#define KeySlave
+  	#define KeyMaster
 
 	#define TiempoTestbtnOn  10000
 	#define TiempoTestbtnOff  1000
 	
+	#ifdef KeyMaster
+		#define TiempoTestbtnOnRemoto  15000
+	#endif
+
 	#ifdef KeyMaster
 		#define CiclosNoDetect	3
 	#endif
@@ -103,6 +107,13 @@
 
 	#ifdef KeySlave
 		String cDispositivoRemoto = String(' '); 
+	#endif
+	
+	#ifdef KeyMaster
+		#define TiempoTestbtnOn  10000
+		
+		unsigned long nMiliSegundosTestRemoto = 0;
+		unsigned long nTiempoTestRemoto = 0;
 	#endif
 	
 	int scanTime = 2; //In seconds
@@ -117,6 +128,7 @@
 	boolean lEstadoLocalAnterior = 0;
 	unsigned long nMiliSegundosTestbtn = 0;
 	unsigned long nTiempoTestbtn = 0;
+
 	int nContador = 0;		//Contador de veces que no se detecta KeyBt para determinar cuando se considera que no hay KeyBt.
 									//Esta variable se usa en el master para dar tiempo a lso exclavos a que refresquen el contador si un exclavo detecta KeyBt
 	
@@ -298,22 +310,32 @@
 	void ActualizaEstadoBalizaLocal (boolean lEstadoBotonLocal)
 	{	
 		
-		if ( (lEstadoBotonLocal || lBotonRemoto) == 0 )
+		if ( (lEstadoBotonLocal || lBotonRemoto) == 0 )			//Si no se detecta boton en local ni en los remotos
 		{
-			if ( nContador < CiclosNoDetect )
+			if ( nContador < CiclosNoDetect )					//Si no se ha llef¡gado al final de las cuentas de no deteccion
 			{
-				nContador ++;
-			}else{
-				lBotonRemoto = 0;
-				lEstadoLocal = 0;
-				nTiempoTestbtn = TiempoTestbtnOff;				
-				ApagaLed();
+				nContador ++;									//Incrementamos el contador de cuentas de no deteccion
+			}else{												//Si llego al final, 
+				lBotonRemoto = 0;								//Ponemos a o el flag lBotonRemoto para indicar que no hay boton remoto detectado
+				lEstadoLocal = 0;								//Ponemos a o el flag lEstadoLocal para indicar que no hay boton local detectado
+				nTiempoTestbtn = TiempoTestbtnOff;				//Ponemos tiempo de escaneo rapido		
+				ApagaLed();										//Apagamos el led para indicar que no se detecta boton en el sistema
 			}			
-		}else{
+		}else{													//Si se detecta boton en local o en remoto
 			lEstadoLocal = 1;
-			nContador = 0;
-			nTiempoTestbtn = TiempoTestbtnOn;
-			EnciendeLed();
+			nContador = 0;										//Reseteamos el contador de no deteccion
+			nTiempoTestbtn = TiempoTestbtnOn;					//Fijamos un tiempo de escaneo lento
+			if (lEstadoBotonLocal)								//Si hay boton local detectado
+			{
+				EnciendeLed();									//Encendemos el led
+			}else{												//Si solo es el remoto
+				FlashLed();										//Hacemos un flash
+			}	
+			#ifdef KeySlave
+				cSalida = "mensaje-:-"+cDispositivoRemoto+"-:-KeyOn";
+				MensajeServidor(cSalida);
+				cSalida = String(' ');
+			#endif
 		}	
 	}
 	/**
@@ -344,12 +366,31 @@
 				{
 					cSalida = "mensaje-:-"+cDispositivoRemoto+"-:-KeyOn";
 				}else{
-					cSalida = "mensaje-:-"+cDispositivoRemoto+"-:-KeyOff";
+					//cSalida = "mensaje-:-"+cDispositivoRemoto+"-:-KeyOff";
 				}
 				MensajeServidor(cSalida);
 				cSalida = String(' ');
 			}
 		#endif
+		#ifdef KeyMaster
+			if (lCambioEstado)
+			{
+				if(lEstadoLocal)
+				{
+					//cSalida = "comando-:-exec-:-TorreEntrar";
+					cSalida = "telegram-:-Julian-:-Desonexion alarma";
+					//cSalida = "mensaje-:-sirena-:-Flash-:-1-:-1-:-1";
+				}else{
+					//cSalida = "comando-:-exec-:-TorreSalir";
+					cSalida = "telegram-:-Julian-:-Conexion alarma";
+					//cSalida = "mensaje-:-sirena-:-Flash-:-2-:-1-:-1";
+				}
+				MensajeServidor(cSalida);		
+				cSalida = String(' ');                     
+
+			}
+		#endif
+
 		lBoton = 0;										//Reseteamos el flag lBoton	
 		return ( lCambioEstado );	
 	}	
