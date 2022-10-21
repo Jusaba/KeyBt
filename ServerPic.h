@@ -213,6 +213,9 @@
 					{
 						lBoton=1; //Ponemos a 1 el fla de detección de bluetooth de presencia
 						Serial.println(cUUID);
+					}else{
+						Serial.println("******* No Boton ************");
+						Serial.println(cUUID);
 					}
 				}
 			}
