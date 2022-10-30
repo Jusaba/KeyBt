@@ -15,7 +15,7 @@
 	//----------------------------------------------
 	//Includes
 	//----------------------------------------------
-
+#define ESP32
 
 		//Aruino & ESP32
 		#include <WebServer.h>
@@ -27,7 +27,7 @@
 		#include "soc/rtc_cntl_reg.h"  
 		#include "driver/rtc_io.h"
 		#include <WebServer.h>
-		#include <StringArray.h>
+		//#include <StringArray.h>
 		#include <SPIFFS.h>
 		#include <FS.h>
 		#include <WiFiUdp.h>
