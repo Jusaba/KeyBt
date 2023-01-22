@@ -91,47 +91,23 @@ void setup() {
     Comprobacion 
     ------------------*/
     #ifdef KeyMaster
-      if ( millis() > nMiliSegundosTestRemoto + TiempoTestbtnOnRemoto )
+    
+      if ( millis() > nMiliSegundosTestRemoto + TiempoTestbtnOnRemoto )   //Si ha trancurrido el tiempo de Test de deteccion de los remomtos
       {
-        lBotonRemoto = 0;
-        nMiliSegundosTestRemoto = millis();
+        lBotonRemoto = 0;                                                 //Ponemos el Flag de deteccion de boton remoto a 0
+        nMiliSegundosTestRemoto = millis();                               //Reseteamos el contado de tiempo de deteccion de remotos
       }
+    
     #endif
     if ( millis() > nMiliSegundosTestbtn + nTiempoTestbtn )
     {
-
       Scan();
       if (TestCambioEstadoLocal(lBoton))
       {
         Serial.println("*************** Cambio de estado ");
       }
       nMiliSegundosTestbtn = millis();
-/*
-      TestCambioEstado();                         //Comprobamos si hay cambio de estado
 
-      if ( GetEstado () )                         //Si  Baliza detecta el KeyBt
-      {
-        nTiempoTestbtn = TiempoTestbtnOn;         //Establecemos un tiempo de escaneo largo, no importa si tarda en detectar que no hay KeyBt para conectar la alarma
-        if (GetKey())
-        {
-          EnciendeLed();
-        }else{
-          FlashLed();
-        }  
-      }else{                                      //SI no detecta
-        nTiempoTestbtn = TiempoTestbtnOff;        //Establecemos un tiempo corto de escaneo para que la baliza desconecta la alarma nada mas detectar el KeyBt siendo ideal que lo haga antes de abrir la puerta
-        ApagaLed();
-      }
-      lBoton=0;
-	    #ifdef KeyMaster
-		    lBotonRemoto = 0;
-	    #endif
-      nMiliSegundosTestbtn = millis();
-      Serial.print(nTiempoTestbtn);
-      Serial.print(" ");
-      Serial.print(nMiliSegundosTestbtn);
-      Serial.println ("   Scan Bt");
-*/
     }
 
     /*----------------
@@ -152,29 +128,10 @@ void setup() {
         nMiliSegundosTest = millis();
         if ( !TestConexion(lEstadisticas) )             //Si se ha perdido la conexion
         {
-          lConexionPerdida = 1;                 //Ponemos el flag de perdida conexion a 1
-/*
-          if ( GetDispositivo() )                 //Si el dispositivo estaba a On
-          {
-            lEstado = 1;                    //Guardamos ese estado para tenerlo en cuenta en la reconexion
-            DispositivoOff();                 //Ponemos a Off el dispositivo  
-          } 
+          lConexionPerdida = 1;                         //Ponemos el flag de perdida conexion a 1
+
         }else{                            //Si existe conexion
-            #ifdef  PulsadorLed                   //Si no esta definido Debug
-                ApagaLed();                     //Apagamos el led para indicar que se ha finalizado el test                                                                                      
-            #endif    
-          if ( lConexionPerdida )                 //Comprobamos si es una reconexion ( por perdida anterior )
-          {                           //Si lo es
-            lConexionPerdida = 0;               //Reseteamos flag de reconexion
-            if ( lEstado )                    //Ponemos el dispositivo en el estado anterior a la perdida de conexion
-            {
-              DispositivoOn();
-            }else{
-              DispositivoOff();
-            }
-            lEstado = 0;                    //Reseteamos el Flag lEstado
-          } 
-*/         
+                   
         } 
 
       } 
@@ -199,6 +156,12 @@ void setup() {
             nMiliSegundosTestRemoto = millis();            
             lBotonRemoto = 1;
         }
+        if (oMensaje.Mensaje == "KeyOff")							//Si se recibe 'Change', cambia el estado de PinSalida 
+	  		{	
+            nContador = 0;
+            nMiliSegundosTestRemoto = millis();            
+            lBotonRemoto = 0;
+        }        
 			#endif
       if (oMensaje.Mensaje == "GetKey")							//
 	  	{	  
@@ -208,7 +171,8 @@ void setup() {
             {
               cSalida = "Key detectado en esta baliza"; 
             }else{
-              cSalida = "Key detectado en el sistema pero no en esta baliza ";
+
+              cSalida = "Key no detectado en esta baliza pero si en una remota";
             }
           }else{
             #ifdef KeyMaster
