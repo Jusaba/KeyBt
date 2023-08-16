@@ -5,56 +5,57 @@
 #include "ServerPic.h"
 #include "IO.h"
 
-const IPAddress remote_ip(192, 168, 1, 20);
+
+
 
 void setup() {
   
   
-  #ifdef Debug                                      //Usamos el puereto serie solo para debugar 
-    Serial.begin(115200);                             //Si no debugamos quedan libres los pines Tx, Rx para set urilizados
+  #ifdef Debug                                                //Usamos el puereto serie solo para debugar 
+    Serial.begin(115200);                                     //Si no debugamos quedan libres los pines Tx, Rx para set urilizados
     Serial.println("Iniciando........");
     Serial.setDebugOutput(true);
   #endif
 
 
-  BLEDevice::init("");
-  pBLEScan = BLEDevice::getScan(); //create new scan
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
+  BLEDevice::init("");                                        //Inicializamos BLE             
+  pBLEScan = BLEDevice::getScan();                            //Inicia scan
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());  //Fijamos funcion para atencion de deteccion boton
+  pBLEScan->setActiveScan(true);                              //active scan uses more power, but get results faster
   pBLEScan->setInterval(100);
-  pBLEScan->setWindow(99); // less or equal setInterval value
+  pBLEScan->setWindow(99);                                    // less or equal setInterval value
 
-  EEPROM.begin(128);                                //Reservamos zona de EEPROM
-  //BorraDatosEprom ( 0, 128 );                     //Borramos n bytes empezando en la posicion 0   
+  EEPROM.begin(128);                                          //Reservamos zona de EEPROM
+  //BorraDatosEprom ( 0, 128 );                               //Borramos n bytes empezando en la posicion 0   
 
-  pinMode (PinLed, OUTPUT);
-  pinMode(PinReset, INPUT_PULLUP);                        //Configuramos el pin de reset como entrada
+  pinMode (PinLed, OUTPUT);                             
+  pinMode (PinReset, INPUT_PULLUP);                           //Configuramos el pin de reset como entrada
 
     if ( LeeByteEprom ( FlagConfiguracion ) == 0 )            //Comprobamos si el Flag de configuracion esta a 0
-    {                                 // y si esta
-        ModoAP();                           //Lo ponemos en modo AP
-    }else{                                //Si no esta
+    {                                                         // y si esta
+        ModoAP();                                             //Lo ponemos en modo AP
+    }else{                                                    //Si no esta
  
-        if ( ClienteSTA() )                       //Lo poenmos en modo STA y nos conectamos a la SSID
-        {                               //Si jha conseguido conectarse a ls SSID en modo STA
-            if ( ClienteServerPic () )                  //Intentamos conectar a ServerPic
+        if ( ClienteSTA() )                                   //Lo poenmos en modo STA y nos conectamos a la SSID
+        {                                                     //Si jha conseguido conectarse a ls SSID en modo STA
+            if ( ClienteServerPic () )                        //Intentamos conectar a ServerPic
             {
-//              CheckFirmware();                      //Comprobamos si el firmware esta actualizado a la ultima version
+//              CheckFirmware();                              //Comprobamos si el firmware esta actualizado a la ultima version
                 #ifdef Debug
                     Serial.println(" ");
                     Serial.println("Conectado al servidor-------------");
                 #endif 
-                #ifdef  PulsadorLed                             //Si no esta definido Debug
+                #ifdef  PulsadorLed                           //Si no esta definido Debug
                     ApagaLed();   
                 #endif
-                DataConfig aCfg = EpromToConfiguracion ();        //Leemos la configuracin de la EEprom
+                DataConfig aCfg = EpromToConfiguracion ();   //Leemos la configuracin de la EEprom
                 char USUARIO[1+aCfg.Usuario.length()]; 
                 (aCfg.Usuario).toCharArray(USUARIO, 1+1+aCfg.Usuario.length());          //Almacenamos en el array USUARIO el nombre de usuario 
                 cDispositivo = USUARIO;
                 lHomeKit = aCfg.lHomeKit;
                 lWebSocket = aCfg.lWebSocket;
                 lEstadisticas = aCfg.lEstadisticas;
-                #ifdef KeySlave
+                #ifdef KeySlave                              //Si es exclavo, determinamos el nombre del maestro que es igual que el exclavo pero terminado en 'm' 
                   if ( (cDispositivo).indexOf("_") > 0  )
                   { 
                     int nPos_ = (cDispositivo).indexOf("_");
@@ -66,9 +67,7 @@ void setup() {
                 #endif  
 
                 nTiempoTestbtn = TiempoTestbtnOff;
-
-
-                if ( lEstadisticas )                  //Si están habilitadas las estadisticas, actualizamos el numero de inicios
+                if ( lEstadisticas )                                                //Si están habilitadas las estadisticas, actualizamos el numero de inicios
                 {
                     GrabaVariable ("inicios", 1 + LeeVariable("inicios") );
                 }
@@ -78,9 +77,11 @@ void setup() {
 
 }
 
+
   void loop ()
   {
     
+
 
     /*----------------
     Comprobacion Reset
@@ -90,23 +91,21 @@ void setup() {
     /*----------------
     Comprobacion 
     ------------------*/
-    #ifdef KeyMaster
-    
+    #ifdef KeyMaster    
       if ( millis() > nMiliSegundosTestRemoto + TiempoTestbtnOnRemoto )   //Si ha trancurrido el tiempo de Test de deteccion de los remomtos
       {
         lBotonRemoto = 0;                                                 //Ponemos el Flag de deteccion de boton remoto a 0
-        nMiliSegundosTestRemoto = millis();                               //Reseteamos el contado de tiempo de deteccion de remotos
+        nMiliSegundosTestRemoto = millis();                               //Reseteamos el contador de tiempo de deteccion de remotos
       }
-    
     #endif
-    if ( millis() > nMiliSegundosTestbtn + nTiempoTestbtn )
+    if ( millis() > nMiliSegundosTestbtn + nTiempoTestbtn )               //Si ha trnascurrido el tiempo para testear localmente si existe boton
     {
       Scan();
-      if (TestCambioEstadoLocal(lBoton))
+      if (TestCambioEstadoLocal(lBoton))                                  //Comproamos si ha habido cambio de estado en la deteccion de boton
       {
         Serial.println("*************** Cambio de estado ");
       }
-      nMiliSegundosTestbtn = millis();
+      nMiliSegundosTestbtn = millis();                                    //Reseteamos el contador de testeo de boton
 
     }
 
@@ -140,9 +139,16 @@ void setup() {
     /*----------------
     Analisis comandos
     ------------------*/
-    oMensaje = Mensaje ();                      //Iteractuamos con ServerPic, comprobamos si sigue conectado al servidor y si se ha recibido algun mensaje
+    /*****************************************************
+     * Ordenes
+     * GetKey.- Devuelve si existe deteccion de Key en Sistema ( si es master) y/o en modulo si es Master o Slave
+     * Si el modulos es maestro
+     * KeyOn.- Pone el flag de detección en remoto a 1 e inicia contadores deteccion
+     * KeyOff.- Pone el flag de deteccion en remoto a 0 e inicia contadores de deeccion
+    */
+    oMensaje = Mensaje ();                            //Iteractuamos con ServerPic, comprobamos si sigue conectado al servidor y si se ha recibido algun mensaje
 
-    if ( oMensaje.lRxMensaje)                   //Si se ha recibido ( oMensaje.lRsMensaje = 1)
+    if ( oMensaje.lRxMensaje)                         //Si se ha recibido ( oMensaje.lRsMensaje = 1)
     {
       #ifdef Debug        
         Serial.println(oMensaje.Remitente);           //Ejecutamos acciones
@@ -150,42 +156,42 @@ void setup() {
       #endif  
 
    		#ifdef KeyMaster
-        if (oMensaje.Mensaje == "KeyOn")							//Si se recibe 'Change', cambia el estado de PinSalida 
+        if (oMensaje.Mensaje == "KeyOn")							//Si se recibe 'KeyOn'  
 	  		{	
-            nContador = 0;
-            nMiliSegundosTestRemoto = millis();            
-            lBotonRemoto = 1;
+            nContador = 0;                            //Reseteamos el contador
+            nMiliSegundosTestRemoto = millis();       //Inicializamos el contador de tiempo test del remoto     
+            lBotonRemoto = 1;                         //ponemos el flag de deteccion de remoto a 1
         }
-        if (oMensaje.Mensaje == "KeyOff")							//Si se recibe 'Change', cambia el estado de PinSalida 
+        if (oMensaje.Mensaje == "KeyOff")							//Si se recibe 'KeyOff'
 	  		{	
-            nContador = 0;
-            nMiliSegundosTestRemoto = millis();            
-            lBotonRemoto = 0;
+            //nContador = 0;                            //Reseteamos el contador
+            nMiliSegundosTestRemoto = millis();       //Inicializamos el contador de tiempo test del remoto        
+            lBotonRemoto = 0;                         //ponemos el flag de deteccion de remoto a 0
         }        
 			#endif
-      if (oMensaje.Mensaje == "GetKey")							//
+      if (oMensaje.Mensaje == "GetKey")							  //Si se recibe GetKey
 	  	{	  
-          if (GetEstado())
+          if (GetEstado())                            //Si el sistema tiene detectada presencia de boton
           {
-            if ( GetKey() )
+            if ( GetKey() )                           //Comprueba si la baliza tiene boton detectado en local, si lo tiene prepara el tecto para informar
             {
               cSalida = "Key detectado en esta baliza"; 
-            }else{
+            }else{                                    //Si no lo tiene detectado en local.....
 
               cSalida = "Key no detectado en esta baliza pero si en una remota";
             }
-          }else{
-            #ifdef KeyMaster
+          }else{                                      //Si no tiene detectada presencia de boton en local
+            #ifdef KeyMaster                          //Prepara e mensaje a enviar en funcion de si es master o slave
               cSalida = "Key no detectado en el sistema";
             #endif  
             #ifdef KeySlave
               cSalida = "Key no detectado en esta baliza";             
             #endif  
           }  
-  				oMensaje.Mensaje = cSalida;								//Confeccionamos el mensaje a enviar hacia el servidor	
+  				oMensaje.Mensaje = cSalida;								  //Confeccionamos el mensaje a enviar hacia el servidor	
 	  			oMensaje.Destinatario = oMensaje.Remitente;
-		  		EnviaMensaje(oMensaje);									//Y lo enviamos
-          cSalida = String(' ');                    //Limpiamos cSalida para no actualizar valor      }
+		  		EnviaMensaje(oMensaje);									    //Y lo enviamos
+          cSalida = String(' ');                      //Limpiamos cSalida 
       }
     /*----------------
       Actualizacion ultimo valor
@@ -201,7 +207,7 @@ void setup() {
       #ifdef WebSocket
         if ( cSalida != String(' ') && lWebSocket )       //Si está habililtado WebSocket y hay cambio de estado en el dispositivo, se notifica a WebSocket
         { 
-          EnviaMensajeWebSocket(cSalida);           //Actualizamos las páginas html conectadas
+          EnviaMensajeWebSocket(cSalida);                 //Actualizamos las páginas html conectadas
         }
       #endif
 
