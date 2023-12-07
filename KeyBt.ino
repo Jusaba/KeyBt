@@ -1,3 +1,6 @@
+//http://wiki.icbbuy.com/doku.php?id=developmentboard:esp32-c3mini
+//https://github.com/espressif/arduino-esp32/tree/master
+
 #define ESP32
 //#define Pantalla
 

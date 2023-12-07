@@ -1,0 +1,9 @@
+ID                 Instalado Última Nombre                                      
+arduino:avr        1.8.6     1.8.6  Arduino AVR Boards                          
+arduino:esp32      2.0.10    2.0.13 Arduino ESP32 Boards                        
+arduino:samd       1.8.11    1.8.13 Arduino SAMD Boards (32-bits ARM Cortex-M0+)
+attiny:avr         1.0.2     1.0.2  ATtiny Microcontrollers                     
+esp32:esp32        2.0.11    2.0.11 esp32                                       
+esp8266:esp8266    2.7.4     2.7.4  ESP8266 Boards (2.7.4)                      
+Heltec-esp32:esp32 0.0.6     0.0.6  Heltec ESP32 Arduino                        
+

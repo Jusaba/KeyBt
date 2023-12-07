@@ -1,0 +1,1 @@
+arduino-cli upload -p COM10 -b esp32:esp32:esp32wrover -i KeyBt.ino.bin

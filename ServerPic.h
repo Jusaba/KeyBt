@@ -526,12 +526,12 @@ Serial.println (nContador);
 			{
 				if(lEstadoLocal)										//Si el nuevo estado es deteccion 
 				{
-					cSalida = "comando-:-exec-:-TorreEntrar";			//Desconectamos alarma
-					//cSalida = "telegram-:-Julian-:-Desonexion alarma";	//Avisamos por telegram 	
+					//cSalida = "comando-:-exec-:-TorreEntrar";			//Desconectamos alarma
+					cSalida = "telegram-:-Julian-:-Boton detectado";	//Avisamos por telegram 	
 					//cSalida = "mensaje-:-sirena-:-Flash-:-1-:-1-:-1";	//Avisamos con sirena
 				}else{
-					cSalida = "comando-:-exec-:-TorreSalir";			//Conectamos alarma
-					//cSalida = "telegram-:-Julian-:-Conexion alarma";	//Avisamos por telegram
+					//cSalida = "comando-:-exec-:-TorreSalir";			//Conectamos alarma
+					cSalida = "telegram-:-Julian-:-Boton no detectado";	//Avisamos por telegram
 					//cSalida = "mensaje-:-sirena-:-Flash-:-2-:-1-:-1"; //Avisamos con sirena
 				}
 				MensajeServidor(cSalida);		
