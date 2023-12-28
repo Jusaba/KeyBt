@@ -1,1 +1,6 @@
 # KeyBt
+El uso principal de un dispositivo KeyBt es el reconocimiento de llavero bluetooth para control de accesos.
+La base de los dispositovs es el ESP32 ya que, al contrario que el ESP8266, disponen de la facilidad Bluetooth incorporada.
+El principio de funcionamiento es muy sencillo, el usuario porta un **boton/llavero** con el modulo nRF52810 o similar. En circunstancias normales el usuario se encuentra en el domicilio, el módulo **KeyBt** tiene registrado el botón como localizado. Si el usuario abandona el domicilio el módulo **KeyBt** detecta que el botón/llavero deja de estar en su radio de detección, hay un cambio de estado y actua en consecuencia, mandando mensaje a otro elmentgo de Serverpic, ejecutando comandos de Serverpic o cualquier otra acción que se le indique, por ejemplo, conectar un PIR.
+El usuario regresa al domicilio, el módulo **KeyBt** detecta la presencia del **boton/llavero**, se produce un cambio de estado y desencadena las acciones programadas.
+![](Imagenes/General.jpg)
