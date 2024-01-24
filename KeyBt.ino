@@ -20,7 +20,9 @@ void setup() {
     Serial.setDebugOutput(true);
   #endif
 
-
+  //********************
+  // Inicializacion de BLE
+  //********************
   BLEDevice::init("");                                        //Inicializamos BLE             
   pBLEScan = BLEDevice::getScan();                            //Inicia scan
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());  //Fijamos funcion para atencion de deteccion boton
@@ -28,8 +30,8 @@ void setup() {
   pBLEScan->setInterval(100);
   pBLEScan->setWindow(99);                                    // less or equal setInterval value
 
-  EEPROM.begin(128);                                          //Reservamos zona de EEPROM
-  //BorraDatosEprom ( 0, 128 );                               //Borramos n bytes empezando en la posicion 0   
+  EEPROM.begin(256);                                          //Reservamos zona de EEPROM
+  //BorraDatosEprom ( 0, 256 );                                 //Borramos n bytes empezando en la posicion 0   
 
   pinMode (PinLed, OUTPUT);                             
   pinMode (PinReset, INPUT_PULLUP);                           //Configuramos el pin de reset como entrada
@@ -62,18 +64,21 @@ void setup() {
                   if ( (cDispositivo).indexOf("_") > 0  )
                   { 
                     int nPos_ = (cDispositivo).indexOf("_");
-                    cDispositivoRemoto = ((cDispositivo).substring(0, nPos_))+"m";
+                    cDispositivoMaestro = ((cDispositivo).substring(0, nPos_))+"m";
                     Serial.println("--------------------------");
-                    Serial.println(cDispositivoRemoto);
+                    Serial.println(cDispositivoMaestro);
                     Serial.println("--------------------------");
                   }
                 #endif  
+
+                cKey = GetCodeKey();
 
                 nTiempoTestbtn = TiempoTestbtnOff;
                 if ( lEstadisticas )                                                //Si están habilitadas las estadisticas, actualizamos el numero de inicios
                 {
                     GrabaVariable ("inicios", 1 + LeeVariable("inicios") );
                 }
+                
             }
         } 
     }
@@ -94,12 +99,28 @@ void setup() {
     /*----------------
     Comprobacion 
     ------------------*/
+  if (lKeyBt)                                                            //Si esta habilitado la detección Bluetooth
+  {
     #ifdef KeyMaster    
-      if ( millis() > nMiliSegundosTestRemoto + TiempoTestbtnOnRemoto )   //Si ha trancurrido el tiempo de Test de deteccion de los remomtos
+    if ( millis() > nMiliSegundosTestRemoto + TiempoTestbtnOnRemoto )     //Si ha trancurrido el tiempo de Test de deteccion de los remomtos
       {
         lBotonRemoto = 0;                                                 //Ponemos el Flag de deteccion de boton remoto a 0
         nMiliSegundosTestRemoto = millis();                               //Reseteamos el contador de tiempo de deteccion de remotos
       }
+    #endif
+    #ifdef KeySlave
+    if ( millis() > nMiliSegundosInfoRemoto + TiempoTestbtnOnRemoto - 5000 )     //Si ha trancurrido el tiempo de envio estado a Master
+    {
+				if ( lEstadoLocal )											                                 //Si se ha detectado boton el este remoto
+				{
+					cSalida = "mensaje-:-"+cDispositivoMaestro+"-:-KeyOn";	                 //Mandamos mensaje On a master 
+				}else{														                                       //Si no se ha detectado borton en este remoto
+					cSalida = "mensaje-:-"+cDispositivoMaestro+"-:-KeyOff";	               //Mandamos mensaje Off a master
+				}
+				MensajeServidor(cSalida);				
+				cSalida = String(' ');
+        nMiliSegundosInfoRemoto = millis();
+    }    
     #endif
     if ( millis() > nMiliSegundosTestbtn + nTiempoTestbtn )               //Si ha trnascurrido el tiempo para testear localmente si existe boton
     {
@@ -109,45 +130,43 @@ void setup() {
         Serial.println("*************** Cambio de estado ");
       }
       nMiliSegundosTestbtn = millis();                                    //Reseteamos el contador de testeo de boton
-
     }
-
-    /*----------------
-    Comprobacion Conexion
-    ------------------*/
-    if ( TiempoTest > 0 )
+  }
+  /*----------------
+  Comprobacion Conexion
+  ------------------*/
+  if ( TiempoTest > 0 )
+  {
+    if ( millis() > ( nMiliSegundosTest + TiempoTest ) )      //Comprobamos si existe conexion  
     {
-      if ( millis() > ( nMiliSegundosTest + TiempoTest ) )      //Comprobamos si existe conexion  
+      #ifdef  PulsadorLed                                     //Si no esta definido Debug
+          EnciendeLed();                                      //Encendemos el led para indicar que se comprueba la conexion
+      #endif    
+      nMiliSegundosTest = millis();
+      if ( !TestConexion(lEstadisticas) )                     //Si se ha perdido la conexion
       {
-          #ifdef  PulsadorLed                     //Si no esta definido Debug
-              EnciendeLed();                          //Encendemos el led para indicar que se comprueba la conexion
-          #endif    
-
-
-  
-
-
-        nMiliSegundosTest = millis();
-        if ( !TestConexion(lEstadisticas) )             //Si se ha perdido la conexion
-        {
-          lConexionPerdida = 1;                         //Ponemos el flag de perdida conexion a 1
-
-        }else{                            //Si existe conexion
-                   
-        } 
-
+        lConexionPerdida = 1;                                 //Ponemos el flag de perdida conexion a 1
+      }else{                                                  //Si existe conexion
+             
       } 
-    }
+    } 
+  }
 
     /*----------------
     Analisis comandos
     ------------------*/
     /*****************************************************
-     * Ordenes
-     * GetKey.- Devuelve si existe deteccion de Key en Sistema ( si es master) y/o en modulo si es Master o Slave
-     * Si el modulos es maestro
-     * KeyOn.- Pone el flag de detección en remoto a 1 e inicia contadores deteccion
-     * KeyOff.- Pone el flag de deteccion en remoto a 0 e inicia contadores de deeccion
+    * Ordenes
+    * Para todos los modulos 
+    *    GetKey.- Devuelve si existe deteccion de Key en Sistema ( si es master) y/o en modulo si es Master o Slave
+    *    SetCodeKey.- Fija codigo de la llave para que sea reconocida por el modulo 
+    *    GetCodeKey.- Devuelve el codigo de recopnocimiento de llave 
+    *    EnableKeyBt.- Habilita la detección de Llaves Bluetooth
+    *    DisableKeyBt.- Deshabilita la detección de Llaves Bluetooth 
+    *    GetKyyBt.- Devuelve con 1/0 si el módulo está Habilitado/Deshabilitado para deteccion Bluetooth 
+    * Si el modulos es maestro
+    *    KeyOn.- Pone el flag de detección en remoto a 1 e inicia contadores deteccion
+    *    KeyOff.- Pone el flag de deteccion en remoto a 0 e inicia contadores de deteccion
     */
     oMensaje = Mensaje ();                            //Iteractuamos con ServerPic, comprobamos si sigue conectado al servidor y si se ha recibido algun mensaje
 
@@ -157,26 +176,27 @@ void setup() {
         Serial.println(oMensaje.Remitente);           //Ejecutamos acciones
         Serial.println(oMensaje.Mensaje);
       #endif  
-
-   		#ifdef KeyMaster
-        if (oMensaje.Mensaje == "KeyOn")							//Si se recibe 'KeyOn'  
-	  		{	
-            nContador = 0;                            //Reseteamos el contador
-            nMiliSegundosTestRemoto = millis();       //Inicializamos el contador de tiempo test del remoto     
-            lBotonRemoto = 1;                         //ponemos el flag de deteccion de remoto a 1
-        }
-        if (oMensaje.Mensaje == "KeyOff")							//Si se recibe 'KeyOff'
-	  		{	
-            //nContador = 0;                            //Reseteamos el contador
-            nMiliSegundosTestRemoto = millis();       //Inicializamos el contador de tiempo test del remoto        
-            lBotonRemoto = 0;                         //ponemos el flag de deteccion de remoto a 0
-        }        
-			#endif
-      if (oMensaje.Mensaje == "GetKey")							  //Si se recibe GetKey
-	  	{	  
-          if (GetEstado())                            //Si el sistema tiene detectada presencia de boton
+      if (lKeyBt)
+      {
+   		  #ifdef KeyMaster
+           if (oMensaje.Mensaje == "KeyOn")							//Si se recibe 'KeyOn'  
+	  	  	  {	
+               nContador = 0;                            //Reseteamos el contador
+               nMiliSegundosTestRemoto = millis();       //Inicializamos el contador de tiempo test del remoto     
+               lBotonRemoto = 1;                         //ponemos el flag de deteccion de remoto a 1
+           }
+           if (oMensaje.Mensaje == "KeyOff")							//Si se recibe 'KeyOff'
+	  	  	  {	
+               //nContador = 0;                          //Reseteamos el contador
+               //nMiliSegundosTestRemoto = millis();       //Inicializamos el contador de tiempo test del remoto        
+               lBotonRemoto = 0;                         //ponemos el flag de deteccion de remoto a 0
+           }       
+        #endif 
+        if (oMensaje.Mensaje == "GetKey")							  //Si se recibe GetKey
+	  	  {	  
+          if (KeyBtGetEstado())                            //Si el sistema tiene detectada presencia de boton
           {
-            if ( GetKey() )                           //Comprueba si la baliza tiene boton detectado en local, si lo tiene prepara el tecto para informar
+            if ( KeyBtGetKeyLocal() )                           //Comprueba si la baliza tiene boton detectado en local, si lo tiene prepara el tecto para informar
             {
               cSalida = "Key detectado en esta baliza"; 
             }else{                                    //Si no lo tiene detectado en local.....
@@ -195,13 +215,50 @@ void setup() {
 	  			oMensaje.Destinatario = oMensaje.Remitente;
 		  		EnviaMensaje(oMensaje);									    //Y lo enviamos
           cSalida = String(' ');                      //Limpiamos cSalida 
+        }        
+      }  
+			if ((oMensaje.Mensaje).indexOf("SetCodeKey-:-") == 0) // Si se recibe una orden de "SetCodeKey-:-", se graba en EEPROM el CodeKey
+      {
+	  		String cCodeKey = String(oMensaje.Mensaje).substring(3 + String(oMensaje.Mensaje).indexOf("-:-"), String(oMensaje.Mensaje).length()); // Extraemos segundo parametro pasado
+        SetCodeKey(cCodeKey);
+        cKey = cCodeKey;
+        cSalida = "Grabado el codigo " + cCodeKey;
+  			oMensaje.Mensaje = cSalida;								  //Confeccionamos el mensaje a enviar hacia el servidor	
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									    //Y lo enviamos
+        cSalida = String(' ');                      //Limpiamos cSalida 
       }
-    /*----------------
+      if (oMensaje.Mensaje == "GetCodeKey")				  //Si se recibe GetCodeKey
+	  	{	  
+        oMensaje.Mensaje = cKey;                    //Cogemos el Code JKey
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									    //Y lo enviamos
+      }
+
+      if (oMensaje.Mensaje == "EnableKeyBt")					//Si se recibe EnableKeyBt
+	  	{
+        EnableKeyBt();
+      }  
+      if (oMensaje.Mensaje == "DisableKeyBt")					//Si se recibe DisableKeyBt
+	  	{
+        DIsableKeyBt();
+      }  
+
+      if (oMensaje.Mensaje == "GetKeyBt")							  //Si se recibe GetKeyBt
+	  	{
+        cSalida = GetKeyBt ();
+  			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
+        cSalida = String(' ');                          //Limpiamos cSalida 
+
+      }  
+      /*----------------
       Actualizacion ultimo valor
       ------------------*/
       if ( cSalida != String(' ') )       //Si hay cambio de estado
       { 
-        EnviaValor (cSalida);         //Actualizamos ultimo valor
+        EnviaValor (cSalida);             //Actualizamos ultimo valor
       }
 
       /*----------------

@@ -1,0 +1,95 @@
+//dot Bluetooth.dot -o Wiki/Keybt-Wiki/Imagenes/Bluetooth.png -Tpng -Gcharset=utf8
+digraph G { 
+//--------------------------------------------------------------------
+//Ordenes
+//--------------------------------------------------------------------
+  Scan [label="Scan", shape="box"];
+  subgraph cluster_l {
+    label="Proceso deteccion Llave"
+    labeljust=l
+    bgcolor="lightyellow"
+    subgraph cluster_2 {
+      label="MyAdvertisedDeviceCallbacks"
+      labeljust=l
+      bgcolor="lightyellow"
+      I2 [label="I", shape="circle"]
+      Llave [label="Llave detectada?", shape="diamond"];  
+      O2  [label="O", shape="circle"]
+
+      I2 -> Llave;
+      Llave -> O2 [label="Si"]; 
+    }
+    subgraph cluster_3 {
+      label="TestIbeacomRegistrado"
+      labeljust=l
+      bgcolor="lightyellow"
+      I3 [label="I", shape="circle"];
+      UUID [label="Obtener UUID", shape="box"];
+      InvUUID [label="Invertir UUID", shape="box"];
+      LlaveOk [label="UUID contiene cKey?", shape="diamond"];
+      BotonOn [label="lBoton=1", shape="box"];
+      BotonOff [label="lBoton=0", shape="box"];
+      O3 [label="O", shape="circle"];
+      
+      I3 -> UUID ; 
+      UUID -> InvUUID;
+      InvUUID -> LlaveOk;
+      LlaveOk -> BotonOn [label="Si"]; 
+      LlaveOk -> BotonOff [label="No"];
+      BotonOn -> O3;
+      BotonOff -> O3;
+    }  
+    subgraph cluster_4 {
+      label="TestCambioEstadoLocal"
+      labeljust=l
+      bgcolor="lightyellow"
+      I4 [label="I", shape="circle"];
+      subgraph cluster_5 {
+        label="ActualizaEstadoBalizaLocal"
+        labeljust=l
+        bgcolor="lightyellow"
+        I5 [label="I", shape="circle"];
+        EstadoLocal [label="lBoton = 0 & lBotonRemoto = 0 ?", shape="diamond"];
+        EstadoLocalON [label="lEstadoLocal = 1",  shape="box"];
+        EstadoLocalOFF [label="lEstadoLocal = 0",  shape="box"];
+        O5 [label="O", shape="circle"];
+
+        I5 -> EstadoLocal;
+        EstadoLocal -> EstadoLocalOFF [label = "Si"];
+        EstadoLocal -> EstadoLocalON [label = "No"];
+        EstadoLocalOFF -> O5;
+        EstadoLocalON -> O5;
+      }         
+      O4 [label="O", shape="circle"];
+      ComparaEstados [label="lEstadoLocal distinto a  lEstadoLocalAnterior ?", shape="diamond"];
+      CambioEstadoOn [label="lCambioEstado = 1", shape="box"];
+      CambioEstadoOff [label="lCambioEstado = 0 ", shape="box"];
+      CambioEstado [label="Ha habido cambio de estado", shape="diamond"];
+      Acciones [label="Ejecutar acciones cambio de estado", shape="box"];
+
+      I4 -> I5;
+      O5 -> ComparaEstados;
+      ComparaEstados -> CambioEstadoOn [label="Si"];
+      ComparaEstados -> CambioEstadoOff [label="No"];
+      CambioEstadoOn -> CambioEstado;
+      CambioEstadoOff -> CambioEstado;
+      CambioEstado -> Acciones [label="Si"];
+      CambioEstado -> O4 [label="No"];
+      Acciones -> O4;
+     
+
+    }  
+
+    Scan -> I2;
+    O2 -> I3;
+    O3 -> I4;
+    Llave -> O4 [label="No"]; 
+  }   
+
+  
+//--------------------------------------------------------------------
+
+
+    // Agrega más funciones de loop aquí si es necesario
+
+}

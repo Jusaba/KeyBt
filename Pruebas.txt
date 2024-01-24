@@ -1,0 +1,66 @@
+	/**
+	******************************************************
+	* @brief clase heredada de BLEAdvertisedDeviceCallbacks para personalizar la respuesta de un cliente bt
+	*
+	* Se lee la informacion que proviene del cliente bluetooth y se comprueba si es un boton registrado llamando a TestIbeacomRegistrado()
+	* En caso de que TestIbeacomRegistrado() identifique un boton valido, TestIbeacomRegistrado() pone flag lBoton a 1 para indicar que se detecta boton 
+	* En el programa principal, despues de llamar a TestCambioEstado() se debe resetear este flag
+	*/
+	class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
+	{
+    	void onResult(BLEAdvertisedDevice advertisedDevice)
+		{
+
+			
+			/*PARA FUTURAS VERSIONES, ESTUDIO CODIGOS SEVICIO */
+			/*
+			if (advertisedDevice.haveServiceUUID())
+      		{
+        		BLEUUID devUUID = advertisedDevice.getServiceUUID();
+				
+        		Serial.print("Found ServiceUUID: ");
+        		Serial.println(devUUID.toString().c_str());
+        		Serial.println("");
+				
+			}			
+			if (advertisedDevice.getServiceDataUUIDCount() > 0)
+			{
+				Serial.println("~~~~~~~~~~~~~~~~~~~~");
+				Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+				Serial.print("Service Data count: ");
+				Serial.println(advertisedDevice.getServiceDataCount() );
+				Serial.print("Service Data UUID count: ");
+				Serial.println(advertisedDevice.getServiceDataUUIDCount() );
+   	 			std::string serviceData = advertisedDevice.getServiceData();
+    			int serviceDataLength = serviceData.length();
+				Serial.print("Longitud servicio dato: ");
+				Serial.println(serviceDataLength);
+	   			String returnedString = "";
+    			for (int i = 0; i < serviceDataLength; i++) {
+      				int a = serviceData[i];
+      				if (a < 16) {
+        				returnedString += F("0");
+      				}
+      				returnedString += String(a, HEX);
+    			}
+				Serial.print("Contenido Servicio Dato: ");    
+    			Serial.println(returnedString.c_str());
+				BLEUUID devUUID = advertisedDevice.getServiceData();
+				Serial.print ("Data servicio: ");
+				Serial.println(devUUID.toString().c_str());
+				devUUID = advertisedDevice.getServiceDataUUID();
+				Serial.print ("UUID servicio: ");
+				Serial.println(devUUID.toString().c_str());	
+				Serial.println("~~~~~~~~~~~~~~~~~~~~~~~~");
+
+			}
+			*/
+			if (advertisedDevice.haveManufacturerData() == true)			//Si hay datos de fabricante
+			{
+				TestIbeacomRegistrado ( advertisedDevice );					//Analizamos si es un boton registrado
+			}
+			
+        	return;
+    	}
+
+	};

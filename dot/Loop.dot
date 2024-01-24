@@ -1,0 +1,95 @@
+//dot Loop.dot -o ../Wiki/Keybt-Wiki/Imagenes/Loop.png -Tpng -Gcharset=utf8
+digraph G { 
+    loop [label="loop"];
+    lKeyBt [label="KeyBt Habilitado?", shape="diamond",color="cyan2" ]
+    TempRemoto [label="Temporizacion Test Remoto", shape="diamond",color="cyan2" ]
+    TempLocal [label="Temporizacion Test Local", shape="diamond",color="cyan2" ]
+    Scan [label="Scan" , shape="box", color="cyan2"];
+    TestCambioEstadoLocal [label="TestCambioEstadoLocal()" , shape="box", color="cyan2" ];
+    TestConexion [label="TestConexion", shape="box" ];
+    RemotoOff [label="lBotonRemoto = 0", shape="box", color="cyan2" ];
+//--------------------------------------------------------------------
+//Ordenes
+//--------------------------------------------------------------------
+
+  Mensaje [label="Mensaje", shape="box"];
+  subgraph cluster_l {
+    label="Ordenes"
+    labeljust=l
+    bgcolor="lightyellow"
+    subgraph cluster_2 {
+      label="Key Bluetooth"
+      labeljust=l
+      bgcolor="lightyellow"
+      subgraph cluster_6 {
+        label="KeyBt Habilitado"
+        labeljust=l
+        bgcolor="darkseagreen1"
+        subgraph cluster_5 {
+          label="MASTER"
+          labeljust=l
+          bgcolor="coral"
+          KeyOn [label="KeyOn", shape="box", color="cyan2"];
+          KeyOff [label="KeyOff", shape="box", color="cyan2"];
+        } 
+        GetKey [label="GetKey", shape="box", color="cyan2"];
+      }   
+      Kbt [label="Key Bluetooth"];
+      SetCodeKey [label="SetCodeKey", shape="box", color="cyan2"];
+      GetCodeKey [label="GetCodeKey", shape="box", color="cyan2"];
+      EnableKeyBt [label="Enable KeyBt", shape="box", color="cyan2"];
+      DisableKeyBt [label="Disable KeyBt", shape="box", color="cyan2"];
+      GetKeyBt [label="Get KeyBt", shape="box", color="cyan2"];
+      FinKbt [Label = "Fin Kbt" ];
+
+      Kbt -> GetKey;
+      Kbt -> KeyOn;
+      Kbt -> KeyOff;
+      Kbt -> SetCodeKey;
+      Kbt -> GetCodeKey;
+      Kbt -> EnableKeyBt;
+      Kbt -> DisableKeyBt;
+      Kbt -> GetKeyBt;
+      GetKey -> FinKbt;
+      KeyOn -> FinKbt;
+      KeyOff -> FinKbt;
+      SetCodeKey -> FinKbt;
+      GetCodeKey -> FinKbt;
+      EnableKeyBt -> FinKbt;
+      DisableKeyBt -> FinKbt;
+      GetKeyBt -> FinKbt;
+    }
+    subgraph cluster_3 {
+      label="Sirena"
+      labeljust=l
+      bgcolor="lightyellow"
+    }  
+    subgraph cluster_4 {
+      label="PIR"
+      labeljust=l
+      bgcolor="lightyellow"
+    }  
+
+  }   
+  FinKbt [Label = "Fin Kbt" ];
+
+  
+//--------------------------------------------------------------------
+
+    EnviaValor [label="Actualiza ultimo valor"];
+
+    // Agrega más funciones de loop aquí si es necesario
+    loop -> lKeyBt ;
+    lKeyBt -> TempRemoto [label="Si"];
+    lKeyBt -> TestConexion [label="No"];
+    TempRemoto -> TempLocal  [label=" 0"];
+    TempRemoto -> RemotoOff [label=" 1"];
+    RemotoOff -> TempLocal;
+    TempLocal -> TestConexion [label=" 0"];
+    TempLocal -> Scan [label=" 1"];
+    Scan -> TestCambioEstadoLocal;
+    TestCambioEstadoLocal -> TestConexion;
+    TestConexion -> Mensaje;
+    Mensaje -> Kbt;
+    FinKbt -> EnviaValor;
+}

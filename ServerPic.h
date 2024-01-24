@@ -53,12 +53,41 @@
 		#include <BLEEddystoneTLM.h>
 		#include <BLEBeacon.h>
 
-		#define Placa "ESP32 CAM"
-		#define Modelo "ESP32"
-		#define Ino "KeyBt"
-		#define Tipo "Baliza"					
+							
 
 	
+	//------------------
+	//Hardware Utilizado 
+	//------------------	
+	#define MiniD1_0M
+
+	#ifdef MiniD1_0M
+		#define KeyMaster
+		#define MiniD1_0
+		#define Placa "MiniD1_0"
+		#define Modelo "MiniD1"
+		#define Ino "KeyBtM"					
+		#define ESP32
+		#define Tipo "Baliza"
+		//-----------------
+		//TiEmpo de rebotes
+		//-----------------
+ 		#define TempoRebotes 150
+	#endif
+
+	#ifdef MiniD1_0E
+		#define KeySlave
+		#define MiniD1_0
+		#define Placa "MiniD1_0"
+		#define Modelo "MiniD1"
+		#define Ino "KeyBtE"					
+		#define ESP32
+		#define Tipo "Baliza"
+		//-----------------
+		//TiEmpo de rebotes
+		//-----------------
+ 		#define TempoRebotes 150
+	#endif
 
 
 	//----------------------------
@@ -87,34 +116,29 @@
 	#include "IO.h";
 
 	//----------------------------
-	//Declaracion de variables PARTICULARES
+	//Definiciones y declaracion de variables PARTICULARES
 	//----------------------------
-  	#define KeyMaster
-	//#define KeySlave
+  	//
 
+	//-----------------
+	//Keybt
+	//-----------------
 	#define TiempoTestbtnOn  10000						//Tiempo de scaneo cuando se ha detectado boton
 	#define TiempoTestbtnOff  1000						//Tiempo de scaneo cuando no hay boton de tectado
-	
+	#define TiempoTestbtnOnRemoto  30000 				//En Master Tiempo de espera de deteccion de remotos
+ 														//En Eslave, tiempo referencia para envio de estado al Master
 	#ifdef KeyMaster
-		#define TiempoTestbtnOnRemoto  15000			//Tiempo de espera de deteccion de remotos
-	#endif
-
-	#ifdef KeyMaster
+		unsigned long nMiliSegundosTestRemoto = 0;		//variable para manejar tiempos de comprobacion de deteccion de boton por parte de remotos
 		#define CiclosNoDetect	3						//Ciclos de no deteccion del master para considerar que no hay presencia de boton
 	#endif
-	
-	#ifdef KeySlave
-		#define CiclosNoDetect	1						//Ciclos de no deteccion del slave para considerar que no hay presencia de boton
-	#endif	
 
 	#ifdef KeySlave
-		String cDispositivoRemoto = String(' '); 		//Variable donde se almacena el nombre del controlador Master
-	#endif
-	
-	#ifdef KeyMaster	
-		unsigned long nMiliSegundosTestRemoto = 0;		//variable para manejar tiempos de comprobacion de deteccion de boton por parte de remotos
-	#endif
-	
+		unsigned long nMiliSegundosInfoRemoto = 0;		//variable para manejar tiempos de envio mensajes de estado al maestro
+		#define CiclosNoDetect	1						//Ciclos de no deteccion del slave para considerar que no hay presencia de boton
+		String cDispositivoMaestro = String(' '); 		//Variable donde se almacena el nombre del controlador Master
+	#endif	
+
+	boolean lKeyBt = 1;	    				//Flag que habilita/Deshabilita la deteccion de llave bluetooth
 	int scanTime = 2; 						//Periodo de scaneo
 	BLEScan *pBLEScan;						//Objeto para el scaneo BLE
 	boolean lBoton = 0;						//Flag que Indica si la rutina de Scan detecta boton valido en local
@@ -127,12 +151,8 @@
 
 	int nContador = 0;						//Contador de veces que no se detecta KeyBt para determinar cuando se considera que no hay KeyBt.
 											//Esta variable se usa en el master para dar tiempo a lso exclavos a que refresquen el contador si un exclavo detecta KeyBt
-	
-	//----------------------------
-	//Declaracion de funciones PARTICULARES
-	//----------------------------
 
-	
+	String cKey;
 		
 
 	//----------------------------------------------
@@ -154,7 +174,6 @@
 	//----------------------------------------------
 	//cARACTERISTICAS DISPOSITIVO
 	//----------------------------------------------
-	#define ESP32
 	#define VIno "1.0"
 	#define VBuild  "1"	
 	//----------------------------------------------
@@ -166,19 +185,39 @@
 	#define VCore "1.0.4";					//Versión del Core Arduino
 
 
-	//---------------------------------
-	//FUNCIONES PARTICULARES
-	//---------------------------------
+	//----------------------------
+	//Declaracion de funciones PARTICULARES
+	//----------------------------
 
+	//-----------------
+	//Keybt
+	//-----------------
 	#define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00) >> 8) + (((x)&0xFF) << 8))	
-	boolean TestIbeacomRegistrado (BLEAdvertisedDevice advertisedDevice);
 	void Scan (void);
-	
+	boolean TestIbeacomRegistrado (BLEAdvertisedDevice advertisedDevice);
 	void ActualizaEstadoBalizaLocal (boolean lEstadoBotonLocal);
+	String InvierteUUID (String cUUID);
 
-	boolean GetEstado (void);
-	boolean GetKey();
-	boolean GetKeyRemoto();
+	boolean KeyBtGetEstado (void);
+	boolean KeyBtGetKeyLocal();
+	boolean KeyBtGetKeyRemoto();
+
+	String GetCodeKey ();
+	void SetCodeKey (String cCodeKey);	
+
+	void EnableKeyBt (void) { lKeyBt = 1; };
+	void DIsableKeyBt (void) { lKeyBt = 0; };
+	String GetKeyBt (void) { return ( lKeyBt ? "1" : "0" ); };
+
+	
+
+	//*Funciones para Debug
+	void printcUUID (String cUUID, BLEBeacon oBeacon, BLEAdvertisedDevice advertisedDevice);
+	void printScan (void);
+
+
+
+
 	void EnciendeLed();
 	void ApagaLed();
 	void FlashLed();
@@ -197,56 +236,10 @@
 	{
     	void onResult(BLEAdvertisedDevice advertisedDevice)
 		{
-
-			
-			/*PARA FUTURAS VERSIONES, ESTUDIO CODIGOS SEVICIO */
-			/*
-			if (advertisedDevice.haveServiceUUID())
-      		{
-        		BLEUUID devUUID = advertisedDevice.getServiceUUID();
-				
-        		Serial.print("Found ServiceUUID: ");
-        		Serial.println(devUUID.toString().c_str());
-        		Serial.println("");
-				
-			}			
-			if (advertisedDevice.getServiceDataUUIDCount() > 0)
-			{
-				Serial.println("~~~~~~~~~~~~~~~~~~~~");
-				Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
-				Serial.print("Service Data count: ");
-				Serial.println(advertisedDevice.getServiceDataCount() );
-				Serial.print("Service Data UUID count: ");
-				Serial.println(advertisedDevice.getServiceDataUUIDCount() );
-   	 			std::string serviceData = advertisedDevice.getServiceData();
-    			int serviceDataLength = serviceData.length();
-				Serial.print("Longitud servicio dato: ");
-				Serial.println(serviceDataLength);
-	   			String returnedString = "";
-    			for (int i = 0; i < serviceDataLength; i++) {
-      				int a = serviceData[i];
-      				if (a < 16) {
-        				returnedString += F("0");
-      				}
-      				returnedString += String(a, HEX);
-    			}
-				Serial.print("Contenido Servicio Dato: ");    
-    			Serial.println(returnedString.c_str());
-				BLEUUID devUUID = advertisedDevice.getServiceData();
-				Serial.print ("Data servicio: ");
-				Serial.println(devUUID.toString().c_str());
-				devUUID = advertisedDevice.getServiceDataUUID();
-				Serial.print ("UUID servicio: ");
-				Serial.println(devUUID.toString().c_str());	
-				Serial.println("~~~~~~~~~~~~~~~~~~~~~~~~");
-
-			}
-			*/
 			if (advertisedDevice.haveManufacturerData() == true)			//Si hay datos de fabricante
 			{
 				TestIbeacomRegistrado ( advertisedDevice );					//Analizamos si es un boton registrado
-			}
-			
+			}			
         	return;
     	}
 
@@ -259,7 +252,7 @@
 	*
 	* Si se detecta un boton valido poen a 1 el flag lBoton ( Ojo, leer descripcion de BLEAdvertisedDeviceCallbacks para ver como reponer flag)
 	* Para la comprobacion de si es boton valido lo primero que ira es que la trama sea de un dispositivo iBeacom
-	* y leugo mira si la trama lleva el codigo "3112-1991"
+	* y leugo mira si la trama lleva el codigo cKey
 	*
 	* @param advertisedDevice.- Objeto BLEAdvertisedDevice recibido en BLEAdvertisedDeviceCallbacks
 	* 
@@ -267,6 +260,7 @@
 	*	05501230380491191231010060190824 que se traduce a  24081960-0001-3112-1991-043830125005
 	*   05501230380491191231010091191231
 	*   05501230380491191231010091191231
+	*
 	* @return Devuelve 1 si se es boton registrado, 0 en caso contrario
 	*/	
 	boolean TestIbeacomRegistrado (BLEAdvertisedDevice advertisedDevice)
@@ -283,134 +277,69 @@
 			oBeacon.setData(strManufacturerData);
 			//Extraemos de la trama el UUID
 			String cUUID = oBeacon.getProximityUUID().toString().c_str();
+			cUUID = InvierteUUID(cUUID);	//Invertimos cUUID	
 
-			//Boton Jalee
-			//Si el UUID contiene el texto '3112-1991' se trata de un boton para detectar presencia
-			if (cUUID.indexOf("3112-1991") > 0)
+			//Si el UUID contiene el texto cKey se trata de un boton para detectar presencia
+			if (cUUID.indexOf(cKey) > 0)
 			{
-				lBoton=1;			//Ponemos a 1 el flag de detección boton
-				lSalida = 1;		//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
+				lBoton=1;					//Ponemos a 1 el flag de detección boton
+				lSalida = 1;				//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
 				#ifdef Debug
-					Serial.println(cUUID);
-					Serial.printf("ID: %04X Major: %d Minor: %d UUID: %s Power: %d\n", oBeacon.getManufacturerId(), ENDIAN_CHANGE_U16(oBeacon.getMajor()), ENDIAN_CHANGE_U16(oBeacon.getMinor()), oBeacon.getProximityUUID().toString().c_str(), oBeacon.getSignalPower());
-					Serial.print ("Fecha de naciemiento ");
-					Serial.println(cUUID.substring(0,8));
-					Serial.print ("Boton: ");
-					Serial.println (cUUID.substring( 9,13 ));
-					Serial.print ("Codigo: ");
-					Serial.println (cUUID.substring( 14,23 ));
-
-					if (advertisedDevice.haveRSSI())
-					{
-						Serial.print("RSSI: ");
-						Serial.println(advertisedDevice.getRSSI());
-					}
-					if (advertisedDevice.haveTXPower())
-					{
-						Serial.print("TXPower: ");
-						Serial.println(advertisedDevice.getTXPower());
-					}				
-					if (advertisedDevice.haveName())
-					{
-						String cNombre = "";	
-						cNombre = advertisedDevice.getName().c_str();
-						Serial.println("########################");
-						Serial.print ("Nombre dispositivo: ");
-						Serial.println (cNombre);
-						Serial.println(" ");
-						Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
-						Serial.println("########################");
-					}	
+					printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
 				#endif				
 			}
+
 			//------------------------
 			//Boton HelytIot averiados
-			//------------------------
-			if((ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 256 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 25) || (ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 10011 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 19641) )
+			//------------------------			
+			if(ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 256 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 25 )
 			{
 				lBoton=1; 			//Ponemos a 1 el flag de detección boton
 				lSalida = 1;		//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
 				#ifdef Debug
-					Serial.println(cUUID);
-					Serial.printf("ID: %04X Major: %d Minor: %d UUID: %s Power: %d\n", oBeacon.getManufacturerId(), ENDIAN_CHANGE_U16(oBeacon.getMajor()), ENDIAN_CHANGE_U16(oBeacon.getMinor()), oBeacon.getProximityUUID().toString().c_str(), oBeacon.getSignalPower());
+					printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
 				#endif
 			}
-			if((ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 1011 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 19641) || (ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 10011 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 19641) )
+			
+			
+			if(ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 1011 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 19641)  
 			{
 				lBoton=1; 			//Ponemos a 1 el flag de detección boton
 				lSalida = 1;		//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
 				#ifdef Debug
-					Serial.println(cUUID);
-					Serial.printf("ID: %04X Major: %d Minor: %d UUID: %s Power: %d\n", oBeacon.getManufacturerId(), ENDIAN_CHANGE_U16(oBeacon.getMajor()), ENDIAN_CHANGE_U16(oBeacon.getMinor()), oBeacon.getProximityUUID().toString().c_str(), oBeacon.getSignalPower());
+					printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
 				#endif
 			}
+			
 		}	
 		return (lSalida);
 	}
 	/**
 	******************************************************
-	* @brief Comprueba si el sistema tiene keybt detectado 
+	* @brief Invierte una cadena UUID
 	*
-	* Devuelve 1 el sistema detectado keybt, 0 en caso contrario
-	* Es posible que la baliza no detecte key pero este en estado 1 por encontrarse en cilcos de escaneo antes de desconexion
-	* o en caso de maestro, que puedas ser detectado por otra baliza
-	*/
-	boolean  GetEstado (void)
-	{
-		return ( lEstadoLocal );
-	}
-	/**
-	******************************************************
-	* @brief Comprueba si esta baliaza tiene keybt detectado
+	* @param cUUID.- Cadena UUID a invertir 
 	*
-	* Devuelve 1 si la baliza detecta keybt, 0 en caso contrario
-	*/
-	boolean  GetKey (void)
-	{
-		return ( lBotonLocal );
-	}
-	/**
-	******************************************************
-	* @brief Comprueba si hay baliza remota con deteccion de key
-	*
-	* Devuelve 1 si la baliza detecta keybt, 0 en caso contrario
-	*/
-	boolean  GetKeyRemoto (void)
-	{
-		return ( lBotonRemoto );
-	}		
-	/**
-	******************************************************
-	* @brief Enciende el led
+	* @return Devuelve la cadena UUID invertida
 	*
 	*/
-	void EnciendeLed (void)
+	String InvierteUUID (String cUUID)
 	{
-	  digitalWrite(PinLed, HIGH);	
-	}
-	/**
-	******************************************************
-	* @brief Apaga el led
-	*
-	*/
-	void ApagaLed (void)
-	{
-	  digitalWrite(PinLed, LOW);	
-	}
-	/**
-	******************************************************
-	* @brief Apaga el led
-	*
-	*/
-	void FlashLed (void)
-	{
-	  EnciendeLed();
-	  delay(100);
-	  ApagaLed();
-	  delay(100);	
-	  EnciendeLed();
-	  delay(100);
-	  ApagaLed();
+		int nLenUUID = cUUID.length();
+		String cUUIDInvert = String(' ');
+		int nPos = nLenUUID - 2;
+		while ( nPos > -1 )
+		{
+			if ( cUUID.substring(nPos + 1, nPos + 2) == String('-'))
+			{ 
+				cUUIDInvert = cUUIDInvert + "-";
+				nPos = nPos -1 ;
+			}else{
+				cUUIDInvert = cUUIDInvert + cUUID.substring(nPos, nPos + 2);
+				nPos = nPos - 2;	
+			}	
+		}
+	    return (cUUIDInvert.substring(1));				//Quitamos el espacio inicial
 	}
 	/**
 	******************************************************
@@ -426,18 +355,7 @@
       pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
 	  lBotonLocal = lBoton;
 	  #ifdef Debug
-	  	#ifdef KeyMaster
-	  		Serial.print ("Scan()->Boton Local: ");
-	  		Serial.print (lBotonLocal);
-	  		Serial.print (" Boton Remoto: ");
-	  		Serial.print (lBotonRemoto);
-	  		Serial.print (" Sistema: ");
-	  		Serial.println (lEstadoLocal);
-		#endif
-		#ifdef KeySlave
-	  		Serial.print ("Scan()->Boton Local: ");
-	  		Serial.println (lBotonLocal);
-		#endif
+		printScan();
 	  #endif
 
 	}	
@@ -463,9 +381,12 @@
 	{	
 		
 		if ( (lEstadoBotonLocal || lBotonRemoto) == 0 )			//Si no se detecta boton en local ni en los remotos
-		{														//en caso de esclavos, lBotonRemoto siempre sera 0
-Serial.print ("Contador: ");
-Serial.println (nContador);		
+		{	
+																//en caso de esclavos, lBotonRemoto siempre sera 0
+			#ifdef Debug	
+				Serial.print ("Contador: ");
+				Serial.println (nContador);
+			#endif		
 			if ( nContador < CiclosNoDetect )					//Si no se ha llef¡gado al final de las cuentas de no deteccion
 			{
 				nContador ++;									//Incrementamos el contador de cuentas de no deteccion
@@ -509,17 +430,17 @@ Serial.println (nContador);
 			lEstadoLocalAnterior = lEstadoLocal;							//Actualizamos el estado anterior
 		}
 		#ifdef KeySlave														//Los escalvos deben informar al maestro en cada scaneo por que si se hiciera en el cambio de estado, un no deteccion mandaria off e innhibiria al resto
-			//if (lCambioEstado)												//En el esclavo, si ha habido cambio de estado
-			//{
+			if (lCambioEstado)												//En el esclavo, si ha habido cambio de estado
+			{
 				if ( lEstadoLocal )											//Si se ha detectado boton el este remoto
 				{
-					cSalida = "mensaje-:-"+cDispositivoRemoto+"-:-KeyOn";	//Mandamos mensaje On a master 
+					cSalida = "mensaje-:-"+cDispositivoMaestro+"-:-KeyOn";	//Mandamos mensaje On a master 
 				}else{														//Si no se ha detectado borton en este remoto
-					cSalida = "mensaje-:-"+cDispositivoRemoto+"-:-KeyOff";	//Mandamos mensaje Off a master
+					cSalida = "mensaje-:-"+cDispositivoMaestro+"-:-KeyOff";	//Mandamos mensaje Off a master
 				}
 				MensajeServidor(cSalida);				
 				cSalida = String(' ');
-			//}	
+			}	
 		#endif
 		#ifdef KeyMaster
 			if (lCambioEstado)											//En el maestro, si ha habido cambio de estado
@@ -527,11 +448,11 @@ Serial.println (nContador);
 				if(lEstadoLocal)										//Si el nuevo estado es deteccion 
 				{
 					//cSalida = "comando-:-exec-:-TorreEntrar";			//Desconectamos alarma
-					cSalida = "telegram-:-Julian-:-Boton detectado";	//Avisamos por telegram 	
+cSalida = "comando-:-exec-:-"+cDispositivo+"I";
 					//cSalida = "mensaje-:-sirena-:-Flash-:-1-:-1-:-1";	//Avisamos con sirena
 				}else{
+cSalida = "comando-:-exec-:-"+cDispositivo+"O";
 					//cSalida = "comando-:-exec-:-TorreSalir";			//Conectamos alarma
-					cSalida = "telegram-:-Julian-:-Boton no detectado";	//Avisamos por telegram
 					//cSalida = "mensaje-:-sirena-:-Flash-:-2-:-1-:-1"; //Avisamos con sirena
 				}
 				MensajeServidor(cSalida);		
@@ -544,7 +465,165 @@ Serial.println (nContador);
 		return ( lCambioEstado );	
 	}	
 
+	/**
+	******************************************************
+	* @brief Funcion que Graba en Eprom el codigo de llave autorizado
+	*
+	* @param cCodeKey.- Codigo de la llave a grabar
+	*/
+	void SetCodeKey (String cCodeKey)
+	{
+		#ifdef Debug
+			Serial.print ("SetCodeKey()->Data Key: ");
+			Serial.println ( cCodeKey ); 	
+		#endif	
+    	EEPROM.put(nPosicionDataUsuario, cCodeKey+'\0'); //Guardo el codigo de la llave
+    	EEPROM.commit();
+	}
+	/**
+	******************************************************
+	* @brief Funcion que recupera el codigo autorizado de llave desde Eprom
+	*
+	* @return Codigo de la llave autorizada
+	*/
+	String GetCodeKey (void)
+	{
+		String cCodeKey; 
+		EEPROM.get(nPosicionDataUsuario, cCodeKey); //Guardo la config
+		#ifdef Debug
+			Serial.print ("GetCodeKey()->Posicion EEPROM: ");
+			Serial.print (nPosicionDataUsuario);
+			Serial.print (" Data Key: ");
+			Serial.println ( cCodeKey ); 	
+		#endif	
+		return ( cCodeKey );
 
+	}
+	/**
+	******************************************************
+	* @brief Funcion que imprime los datos de un bloque UUID
+	*
+	* @param.- cUUID, UUID del que se quieren imprimir los datos
+	*
+	*/
+	void printcUUID (String cUUID, BLEBeacon oBeacon, BLEAdvertisedDevice advertisedDevice)
+	{
+		Serial.println(cUUID);
+		Serial.printf("ID: %04X Major: %d Minor: %d UUID: %s Power: %d\n", oBeacon.getManufacturerId(), ENDIAN_CHANGE_U16(oBeacon.getMajor()), ENDIAN_CHANGE_U16(oBeacon.getMinor()), oBeacon.getProximityUUID().toString().c_str(), oBeacon.getSignalPower());
+		Serial.print ("Fecha de naciemiento ");
+		Serial.println(cUUID.substring(0,8));
+		Serial.print ("Boton: ");
+		Serial.println (cUUID.substring( 8,12 ));
+		Serial.print ("Codigo: ");
+		Serial.println (cUUID.substring( 13,22 ));
+		if (advertisedDevice.haveRSSI())
+		{
+			Serial.print("RSSI: ");
+			Serial.println(advertisedDevice.getRSSI());
+		}
+		if (advertisedDevice.haveTXPower())
+		{
+			Serial.print("TXPower: ");
+			Serial.println(advertisedDevice.getTXPower());
+		}				
+		if (advertisedDevice.haveName())
+		{
+			String cNombre = "";	
+			cNombre = advertisedDevice.getName().c_str();
+			Serial.println("########################");
+			Serial.print ("Nombre dispositivo: ");
+			Serial.println (cNombre);
+			Serial.println(" ");
+			Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+			Serial.println("########################");
+		}	
+
+	}
+	/**
+	******************************************************
+	* @brief Funcion que imprime datos de la función Scan()
+	*/
+	void printScan (void)
+	{
+		#ifdef KeyMaster
+	  		Serial.print ("Scan()->Boton Local: ");
+	  		Serial.print (lBotonLocal);
+	  		Serial.print (" Boton Remoto: ");
+	  		Serial.print (lBotonRemoto);
+	  		Serial.print (" Sistema: ");
+	  		Serial.println (lEstadoLocal);
+		#endif
+		#ifdef KeySlave
+	  		Serial.print ("Scan()->Boton Local: ");
+	  		Serial.println (lBotonLocal);
+		#endif
+	}
+	/**
+	******************************************************
+	* @brief Comprueba si el sistema tiene keybt detectado 
+	*
+	* Devuelve 1 el sistema detectado keybt, 0 en caso contrario
+	* Es posible que la baliza no detecte key pero este en estado 1 por encontrarse en cilcos de escaneo antes de desconexion
+	* o en caso de maestro, que puedas ser detectado por otra baliza
+	*/
+	boolean  KeyBtGetEstado (void)
+	{
+		return ( lEstadoLocal );
+	}
+	/**
+	******************************************************
+	* @brief Comprueba si esta baliaza tiene keybt detectado
+	*
+	* Devuelve 1 si la baliza detecta keybt, 0 en caso contrario
+	*/
+	boolean  KeyBtGetKeyLocal (void)
+	{
+		return ( lBotonLocal );
+	}
+	/**
+	******************************************************
+	* @brief Comprueba si hay baliza remota con deteccion de key
+	*
+	* Devuelve 1 si la baliza detecta keybt, 0 en caso contrario
+	*/
+	boolean  KeyBtGetKeyRemoto (void)
+	{
+		return ( lBotonRemoto );
+	}		
+	/**
+	******************************************************
+	* @brief Enciende el led
+	*
+	*/
+	void EnciendeLed (void)
+	{
+	  digitalWrite(PinLed, HIGH);	
+	}
+	/**
+	******************************************************
+	* @brief Apaga el led
+	*
+	*/
+	void ApagaLed (void)
+	{
+	  digitalWrite(PinLed, LOW);	
+	}
+	/**
+	******************************************************
+	* @brief Apaga el led
+	*
+	*/
+	void FlashLed (void)
+	{
+	  EnciendeLed();
+	  delay(100);
+	  ApagaLed();
+	  delay(100);	
+	  EnciendeLed();
+	  delay(100);
+	  ApagaLed();
+	}
+	
 	//Variables donde se almacenan los datos definidos anteriormente para pasarlos a Serverpic.h
 	//para mandar la información del Hardware y Software utilizados
 	//En la libreria ServerPic.h estan definidos como datos externos y se utilizan en la funcion

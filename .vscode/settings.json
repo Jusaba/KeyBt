@@ -41,6 +41,9 @@
         "cinttypes": "cpp",
         "regex": "cpp",
         "utility": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "xlocale": "cpp",
+        "xstring": "cpp",
+        "CODIGO.C": "cpp"
     }
 }

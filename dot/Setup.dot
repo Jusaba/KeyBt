@@ -1,0 +1,34 @@
+//dot Setup.dot -o Setup.png -Tpng -Gcharset=utf8
+digraph G {
+    setup [label="setup"];
+    BLEDevice_init [label="BLEDevice::init", color="cyan2"];
+    EEPROM_begin [label="EEPROM.begin", shape="box"];
+    LeeByteEprom [label="LeeByteEprom", shape="box"];
+    FlagConfiguracion [Label="FlagConfiguracion", shape="diamond"]
+    ModoAP [label="ModoAP", shape="box"] ;
+    ClienteSTA [label="ClienteSTA", shape="diamond"];
+    ClienteServerPic [label="ClienteServerPic", shape="diamond"];
+    CheckFirmware [label="CheckFirmware", shape="box"];
+    LoadCfg [label="Carga Datos Configuracion", shape="box"];
+    LoadDataKey [label="Carga Codigo Key", shape="box", color="cyan2"];
+    Estadisticas [label="Actualiza Estadisticas", shape="box"];
+    FIN [label="Exit"]
+    WAIT [label="Espera"]
+    // Agrega más funciones de setup aquí si es necesario
+    setup -> BLEDevice_init;
+    BLEDevice_init -> EEPROM_begin;
+    EEPROM_begin -> LeeByteEprom;
+    LeeByteEprom -> FlagConfiguracion;
+    FlagConfiguracion -> ModoAP [label=" 0"]
+    ModoAP -> WAIT
+    FlagConfiguracion -> ClienteSTA [label=" 1"]
+    ClienteSTA -> ClienteServerPic [label=" 1"];
+    ClienteSTA -> setup [label=" 0"];
+    ClienteServerPic -> CheckFirmware [label=" 1"];
+    ClienteServerPic -> setup [label=" 0"];
+    CheckFirmware -> LoadCfg;
+    LoadCfg -> LoadDataKey;
+    LoadDataKey -> Estadisticas;
+    Estadisticas -> FIN
+
+}

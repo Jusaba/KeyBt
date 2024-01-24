@@ -13,9 +13,9 @@
 #ifndef IO_H
 	#define IO_H
 
-
-
-		int PinReset = 0;
-		int PinLed = 2;
+		#ifdef MiniD1_0
+			int PinReset = 0;
+			int PinLed = 2;
+		#endif	
 
 #endif
