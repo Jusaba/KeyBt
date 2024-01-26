@@ -59,7 +59,7 @@
 	//------------------
 	//Hardware Utilizado 
 	//------------------	
-	#define MiniD1_0M
+	#define MiniD1_1M
 
 	#ifdef MiniD1_0M
 		#define KeyMaster
@@ -89,6 +89,20 @@
  		#define TempoRebotes 150
 	#endif
 
+	#ifdef MiniD1_1M
+		#define KeyMaster
+		#define MiniD1_1
+		#define Placa "MiniD1_1"
+		#define Modelo "MiniD1"
+		#define Ino "KeyBtM"					
+		#define ESP32
+		#define Tipo "Baliza"
+		#define Pir
+		//-----------------
+		//TiEmpo de rebotes
+		//-----------------
+ 		#define TempoRebotes 150
+	#endif
 
 	//----------------------------
 	//Declaracion de variables UNIVERSALES
@@ -153,8 +167,17 @@
 											//Esta variable se usa en el master para dar tiempo a lso exclavos a que refresquen el contador si un exclavo detecta KeyBt
 
 	String cKey;
-		
 
+	//-----------------
+	//Pir
+	//-----------------
+	#define TiempoNoPir	10000				//Tiempo entre alarmas de pir. Una vez disparada la alrama pir no se dispara otra hasta que no transucrre ese tiempo			
+
+	boolean lPir = 1;	    				//Flag que habilita/Deshabilita el pir
+	boolean lIntPir = 0;					//Flag que con 1 indica si ha habido interrupción de Pir 
+	boolean lIntPirAnterior = 0;			//Flag que sirve para validar la interrupoción una vez en el bucle
+	unsigned long nMilisegundosNoPir = 0;	//Variable que contiene el tiempo entre dispartos del pir
+	
 	//----------------------------------------------
 	//DEBUG
 	//----------------------------------------------
@@ -206,17 +229,24 @@
 	void SetCodeKey (String cCodeKey);	
 
 	void EnableKeyBt (void) { lKeyBt = 1; };
-	void DIsableKeyBt (void) { lKeyBt = 0; };
+	void DisableKeyBt (void) { lKeyBt = 0; };
 	String GetKeyBt (void) { return ( lKeyBt ? "1" : "0" ); };
-
-	
 
 	//*Funciones para Debug
 	void printcUUID (String cUUID, BLEBeacon oBeacon, BLEAdvertisedDevice advertisedDevice);
 	void printScan (void);
 
+	//-----------------
+	//Pir
+	//-----------------
+	void EnablePir (void);
+	void DisablePir (void);
+	String GetPir (void) { return ( lPir ? "1" : "0" ); };
+	void ArmaPir (void);
+	void DesarmaPir (void);
+	void IRAM_ATTR IntPir(void);
 
-
+	
 
 	void EnciendeLed();
 	void ApagaLed();
@@ -590,6 +620,61 @@ cSalida = "comando-:-exec-:-"+cDispositivo+"O";
 	{
 		return ( lBotonRemoto );
 	}		
+
+	/**
+	******************************************************
+	* @brief Habilita el Pir
+	*
+	* Pone a 1 el flag lPir y habilita su interrupción
+	*/
+	void EnablePir (void)
+	{
+		lPir = 1;
+		attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  FALLING);
+	}
+	/**
+	******************************************************
+	* @brief Deshabilita el Pir
+	*
+	* Pone a 0 el flag lPir y deshabilita su interrupción
+	*/
+	void DisablePir (void)
+	{
+		lPir = 0;
+		detachInterrupt(digitalPinToInterrupt(PinPir));
+	}
+	/**
+	******************************************************
+	* @brief Arma el Pir
+	*
+	* aabilita la interrupción del pir
+	*/
+	void ArmaPir (void)
+	{
+		attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  FALLING);
+	}
+	/**
+	******************************************************
+	* @brief Desarma el Pir
+	*
+	* Deshabilita la interrupción del pir
+	*/
+	void DesarmaPir (void)
+	{
+		detachInterrupt(digitalPinToInterrupt(PinPir));
+	}	
+	/**
+	******************************************************
+	* @brief Rutina de interrupcion del PIR
+	*
+	* 
+	*/
+	void IRAM_ATTR IntPir(void)
+	{
+		DesarmaPir();
+		lIntPir = 1;
+		nMilisegundosNoPir = millis();
+	}	
 	/**
 	******************************************************
 	* @brief Enciende el led

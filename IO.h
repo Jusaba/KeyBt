@@ -17,5 +17,10 @@
 			int PinReset = 0;
 			int PinLed = 2;
 		#endif	
+		#ifdef MiniD1_1
+			int PinReset = 0;
+			int PinLed = 2;
+			int PinPir = 4;
+		#endif	
 
 #endif

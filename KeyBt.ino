@@ -36,6 +36,10 @@ void setup() {
   pinMode (PinLed, OUTPUT);                             
   pinMode (PinReset, INPUT_PULLUP);                           //Configuramos el pin de reset como entrada
 
+  #ifdef Pir
+    pinMode (PinPir, INPUT_PULLUP);
+  #endif
+
     if ( LeeByteEprom ( FlagConfiguracion ) == 0 )            //Comprobamos si el Flag de configuracion esta a 0
     {                                                         // y si esta
         ModoAP();                                             //Lo ponemos en modo AP
@@ -132,6 +136,21 @@ void setup() {
       nMiliSegundosTestbtn = millis();                                    //Reseteamos el contador de testeo de boton
     }
   }
+  if ( lPir )
+  { 
+    if ( lIntPir == 1 &&  !lIntPirAnterior )
+    {
+      Serial.println ("Alarma pir");
+      lIntPirAnterior = 1;
+    }
+    if ( lIntPir == 1 && ( millis() > nMilisegundosNoPir + TiempoNoPir ) )
+    {
+Serial.println("Suuuuuu");
+      lIntPirAnterior = 0;
+      lIntPir = 0;
+      ArmaPir();
+    }
+  }
   /*----------------
   Comprobacion Conexion
   ------------------*/
@@ -156,7 +175,7 @@ void setup() {
     Analisis comandos
     ------------------*/
     /*****************************************************
-    * Ordenes
+    * Ordenes Keybt
     * Para todos los modulos 
     *    GetKey.- Devuelve si existe deteccion de Key en Sistema ( si es master) y/o en modulo si es Master o Slave
     *    SetCodeKey.- Fija codigo de la llave para que sea reconocida por el modulo 
@@ -168,6 +187,12 @@ void setup() {
     *    KeyOn.- Pone el flag de detección en remoto a 1 e inicia contadores deteccion
     *    KeyOff.- Pone el flag de deteccion en remoto a 0 e inicia contadores de deteccion
     */
+    /*****************************************************
+     * Ordenes Pir
+     *  EnablePir.- Habilita el Pir
+     *  DisablePir.- Deshabilita el Pir
+     *  GFetPir.- Devuelve con 1/0 si el Pir está Habilitado/Deshabilitado
+     */
     oMensaje = Mensaje ();                            //Iteractuamos con ServerPic, comprobamos si sigue conectado al servidor y si se ha recibido algun mensaje
 
     if ( oMensaje.lRxMensaje)                         //Si se ha recibido ( oMensaje.lRsMensaje = 1)
@@ -241,7 +266,7 @@ void setup() {
       }  
       if (oMensaje.Mensaje == "DisableKeyBt")					//Si se recibe DisableKeyBt
 	  	{
-        DIsableKeyBt();
+        DisableKeyBt();
       }  
 
       if (oMensaje.Mensaje == "GetKeyBt")							  //Si se recibe GetKeyBt
@@ -253,6 +278,27 @@ void setup() {
         cSalida = String(' ');                          //Limpiamos cSalida 
 
       }  
+
+
+      if (oMensaje.Mensaje == "EnablePir")					//Si se recibe EnablePir
+	  	{
+        EnablePir();
+      }  
+      if (oMensaje.Mensaje == "DisablePir")					//Si se recibe DisablePir
+	  	{
+        DisablePir();
+      }  
+      if (oMensaje.Mensaje == "GetPir")							  //Si se recibe GetPir
+	  	{
+        cSalida = GetPir ();
+  			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
+        cSalida = String(' ');                          //Limpiamos cSalida 
+
+      }  
+
+
       /*----------------
       Actualizacion ultimo valor
       ------------------*/
