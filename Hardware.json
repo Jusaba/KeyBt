@@ -1,0 +1,27 @@
+{
+    "Proyecto":"KeyBt",
+    "Creador":"Julian Salas",
+    "Placas" : 
+    [
+        {
+            "Denominacion":"MiniD1_0",
+            "CPU":
+            { 
+                "Famillia":"ESP32",
+                "Modelo":"Mini D1"
+            },
+            "Compilacion":"arduino-cli compile -b esp32:esp32:d1_mini32:PartitionScheme=min_spiffs,UploadSpeed=115200  -e -v"
+
+        },
+        {
+            "Denominacion":"MiniD1_1",
+            "CPU":
+            { 
+                "Famillia":"ESP32",
+                "Modelo":"Mini D1"
+            },
+            "Compilacion":"arduino-cli compile -b esp32:esp32:d1_mini32:PartitionScheme=min_spiffs,UploadSpeed=115200  -e -v"
+
+        }
+    ]
+}
