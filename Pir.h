@@ -29,8 +29,6 @@
 		//------------------------
 		//Declaracion de funciones 
 		//------------------------
-
-
         void EnablePir (void);
         void DisablePir (void);
         String GetPir (void) { return ( lPir ? "1" : "0" ); };
@@ -52,8 +50,13 @@
 	    void EnablePir (void)
 	    {
 	    	lPir = 1;
-	    	attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  FALLING);
-	    }
+			if (LogicaPir)
+			{
+	    		attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  RISING);
+			}else{
+	    		attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  FALLING);
+			}
+		}
 	    /**
 	    ******************************************************
 	    * @brief Deshabilita el Pir
@@ -74,7 +77,13 @@
 	    */
 	    void ArmaPir (void)
 	    {
-	    	attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  FALLING);
+			if (LogicaPir)
+			{
+	    		attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  RISING);
+			}else{
+	    		attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  FALLING);
+
+			}	
 	    }
 	    /**
 	    ******************************************************

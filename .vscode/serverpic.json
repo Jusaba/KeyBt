@@ -9,8 +9,8 @@
     "fqbn": "esp32:esp32:esp32wrover",
     "configuration": "FlashMode=dio,PartitionScheme=huge_app,DebugLevel=none,UploadSpeed=115200",
     "compilador": "xtensa-esp32-elf-gcc",
-    "com": "COM",
-    "baudios": "921600",
+    "com": "COM10",
+    "baudios": "9600",
     "directorios": [
         {
             "trabajo": {

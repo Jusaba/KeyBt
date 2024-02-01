@@ -21,6 +21,7 @@
 			int PinReset = 0;
 			int PinLed = 2;
 			int PinPir = 4;
+			int PinSirena = 5;
 		#endif	
 
 #endif

@@ -90,6 +90,9 @@
 		#define ESP32
 		#define Tipo "Baliza"
 		#define Pir
+		#define LogicaPir 1
+		#define Sirena
+		#define LogicaSirena 1
 		//-----------------
 		//TiEmpo de rebotes
 		//-----------------
@@ -119,9 +122,10 @@
 	unsigned long nMiliSegundosTest = 0;									//Variable utilizada para temporizar el Test de conexion del modulo a ServerPic
 
 
-	#include "IO.h";
+	#include "IO.h"
 	#include "KeyBt.h"
-	#include "Pir.h";
+	#include "Pir.h"
+	#include "Sirena.h"
 
 	//----------------------------------------------
 	//DEBUG

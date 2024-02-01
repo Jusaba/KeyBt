@@ -39,6 +39,9 @@ void setup() {
   #ifdef Pir
     pinMode (PinPir, INPUT_PULLUP);
   #endif
+  #ifdef Sirena
+    pinMode (PinSirena, OUTPUT);
+  #endif
 
     if ( LeeByteEprom ( FlagConfiguracion ) == 0 )            //Comprobamos si el Flag de configuracion esta a 0
     {                                                         // y si esta
@@ -142,6 +145,14 @@ void setup() {
     {
       Serial.println ("Alarma pir");
       lIntPirAnterior = 1;
+      if (lSirena && lSirenaLocal)
+      {
+			  nTiempoOn =  5;
+			  lOnTemporizado = 1;		
+			  nMilisegundosOn = millis();		
+        SirenaOn();
+      }
+      
     }
     if ( lIntPir == 1 && ( millis() > nMilisegundosNoPir + TiempoNoPir ) )
     {
@@ -150,6 +161,23 @@ Serial.println("Suuuuuu");
       lIntPir = 0;
       ArmaPir();
     }
+  }
+  if (lSirena)
+  {
+ 		/*----------------
+ 		Comprobacion tiempo SirenaOn temporizado
+ 		------------------*/
+		if ( lOnTemporizado )
+		{
+			if ( millis() > nMilisegundosOn + (nTiempoOn * 1000 ))
+			{
+				SirenaOff();	
+				cSalida = "Off";
+				EnviaValor (cSalida);
+				cSalida = String(' ');
+				lOnTemporizado = 0;
+			}
+		} 
   }
   /*----------------
   Comprobacion Conexion
@@ -279,6 +307,12 @@ Serial.println("Suuuuuu");
 
       }  
 
+      /*****************************************************
+      * Ordenes Pir
+      * EnablePir.- Habilita el Pir
+      * DisablePir.- Deshabilita el Pir
+      * GetPir.- Devuelve con 1 o 0 si el Pir está Habilitado o Deshabilitado
+      */
 
       if (oMensaje.Mensaje == "EnablePir")					//Si se recibe EnablePir
 	  	{
@@ -298,7 +332,104 @@ Serial.println("Suuuuuu");
 
       }  
 
-
+      /*****************************************************
+      * Ordenes Sirena
+      * EnableSirena.- Habilita la sirena
+      * DisableSirena.- Deshabilita la sirena
+      * GetSirenaEnable.- Devuelve con 1 o 0 si la sirena está Habilitada o Deshabilitada
+      * SierenaOn.- Suena sirena permanentemente o durante un tiempo  determinado pasado como parametro
+      * SirenaOff.- La sirena deja de sonar
+      * SirenaFlash.- Hace sonar la sirena a rafagas
+      * GetSirenaSuena.- Devuelve con 1 o 0 si la sirena esta sonando o no 
+      * SirenaLocalOn.- Habilita la sirena para ser utilizada localmente
+      * SirenaLocalOff.- Deshabilita la sirena para ser utilizada localmente
+      * GetSirenaLocal.- Devuelve con 1 o 0 si la sirena esta habilitada o no para usarse loclamente 
+      */
+      if (oMensaje.Mensaje == "EnableSirena")					//Si se recibe EnableSirena
+	  	{
+        EnableSirena();
+      }  
+      if (oMensaje.Mensaje == "DisableSirena")					//Si se recibe DisableSirena
+	  	{
+        DisableSirena();
+      }  
+      if (oMensaje.Mensaje == "GetSirenaEnable")			  //Si se recibe GetSirenaEnable
+	  	{
+        cSalida = GetSirenaEnable ();
+  			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
+        cSalida = String(' ');                          //Limpiamos cSalida 
+      }  
+      if (oMensaje.Mensaje == "SirenaLocalOn")					//Si se recibe SirenaLocalOn
+	  	{
+        SirenaLocalOn();
+      }  
+      if (oMensaje.Mensaje == "SirenaLocalOff")					//Si se recibe SirenaLocalOff
+	  	{
+        SirenaLocalOff();
+      }  
+      if (oMensaje.Mensaje == "GetSirenaLocal")							  //Si se recibe GetSirenaLocal
+	  	{
+        cSalida = GetSirenaLocal ();
+  			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
+        cSalida = String(' ');                          //Limpiamos cSalida 
+      }        
+      if (lSirena)
+      {
+		    if ( (oMensaje.Mensaje).indexOf("SirenaOn") == 0)								//Si se recibe "SirenaOn"
+			  {	
+			  	if ( (oMensaje.Mensaje).indexOf("SirenaOn-:-") == 0)        	//Si se le pasa un parametro es que se quiere temporizar la sirena    
+          {
+			  		nTiempoOn =  (String(oMensaje.Mensaje).substring(  3 + String(oMensaje.Mensaje).indexOf("-:-"),  String(oMensaje.Mensaje).length() )).toInt();
+			  		lOnTemporizado = 1;		
+			  		nMilisegundosOn = millis();		
+			  	}	  
+			  	SirenaOn();	
+			  	cSalida = "SirenaOn";
+			  }
+        if (oMensaje.Mensaje == "SirenaOff")					    //Si se recibe SirenaOff
+	  	  {
+          SirenaOff();
+        }  
+			  if ((oMensaje.Mensaje).indexOf("SirenaFlash") == 0)					//Si se recibe "SirenaFlash"
+			  {
+			  	if ((oMensaje.Mensaje).indexOf("SirenaFlash-:-") == 0)		//Si se reciben parametros
+			  	{
+			  		String cValor = String(oMensaje.Mensaje).substring(  3 + String(oMensaje.Mensaje).indexOf("-:-"),  String(oMensaje.Mensaje).length() ); //Extraemos los parametros
+			  		nFlash =   (String(cValor).substring(0, String(cValor).indexOf("-:-"))).toInt();
+			  		cValor = String(cValor).substring(  3 + String(cValor).indexOf("-:-"),  String(cValor).length() );
+			  		nTiempoFlashOn =  (String(cValor).substring(0, String(cValor).indexOf("-:-"))).toInt();
+			  		nTiempoFlashOff = (String(cValor).substring(  3 + String(cValor).indexOf("-:-"),  String(cValor).length() )).toInt();
+ 			  	}else{
+			  		nFlash = nFlashOn;
+			  		nTiempoFlashOn = tFlashOn;
+			  		nTiempoFlashOff = tFlashOff;
+			  	}	
+			  	cSalida = "On";
+			  	EnviaValor (cSalida);
+			  	while ( nFlash > 0 )
+			  	{
+			  		SirenaOn();	
+			  		delay(nTiempoFlashOn*100);
+			  		SirenaOff();
+			  		delay(nTiempoFlashOff*100);	
+			  		nFlash--;
+			  	}
+			  	cSalida = "Off";
+			  	EnviaValor (cSalida);
+			  }	
+        if (oMensaje.Mensaje == "GetSirenaSuena")					//Si se recibe GetSirenaSuena
+	  	  {
+          cSalida = GetSirenaSuena ();
+  		  	oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  	  	oMensaje.Destinatario = oMensaje.Remitente;
+		    	EnviaMensaje(oMensaje);									        //Y lo enviamos
+          cSalida = String(' ');                          //Limpiamos cSalida 
+        }  
+      }
       /*----------------
       Actualizacion ultimo valor
       ------------------*/
