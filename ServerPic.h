@@ -121,6 +121,17 @@
  
 	unsigned long nMiliSegundosTest = 0;									//Variable utilizada para temporizar el Test de conexion del modulo a ServerPic
 
+	//----------------------------
+	//Declaracion de variables PARTICULARES
+	//----------------------------
+
+	byte Configuracion;
+
+	//----------------------------
+	//Declaracion de variables PARTICULARES
+	//----------------------------
+	void LeeConfiguracionDispositivo ( void );
+	void GrabaConfiguracionDispositivo ( int nBitDispositivo, boolean lEstado );
 
 	#include "IO.h"
 	#include "KeyBt.h"
@@ -183,4 +194,36 @@
 	String Tipe = Tipo;
 
 
+	void LeeConfiguracionDispositivo ( void )
+	{
+		Configuracion = LeeVariable ( "Configuracion");
+		#ifdef KeyMaster
+			LeeEstadoEnablekeyBt (Configuracion);
+		#endif	
+		#ifdef KeyMaster
+			LeeEstadoEnablekeyBt (Configuracion);
+		#endif	
+		#ifdef Pir
+		#endif
+		#ifdef Sirena
+		#endif
+		
+
+	}
+	/**
+	******************************************************
+	* @brief Actualiza el byte Configuración en función del dispositivo y el estado del mismo
+	*  y Graba en servidor la variable Configuracion actualizada
+	*
+	*/
+	void GrabaConfiguracionDispositivo ( int nBitDispositivo, boolean lEstado )
+	{
+		if ( lEstado )
+		{
+			bitSet (Configuracion, nBitDispositivo);
+		}else{
+			bitClear (Configuracion, nBitDispositivo);
+		}
+		GrabaVariable ("Configuracion", Configuracion );
+	}
 #endif

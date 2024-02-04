@@ -12,6 +12,7 @@
 	#define SIRENA_H
 
 		#include "Arduino.h"
+		#include "Global.h"
 
         #include "IO.h"
 
@@ -34,6 +35,9 @@
 		long nMilisegundosOn = 0;                	//Variable utilizada para temporizar el tiempo On temporizado
 		int nFlash;									//Variable deonde se almacena el numero de On/Off en un flash 
 
+		#define PosEnableSirenaCfg	2				//Bit que indica la posicion de EnableSirena en el byte de condiguracion
+		#define PosEnableSirenaLocalCfg	3			//Bit que indica la posicion de EnableSirenaLocal en el byte de condiguracion
+
 
  		//------------------------
 		//Declaracion de funciones 
@@ -43,10 +47,12 @@
 		String GetSirenaSuena (void) { return ( lSirenaOn ? "1" : "0" ); };		
 		void SirenaLocalOn (void) ;
 		void SirenaLocalOff (void) ;
+		void LeeEstadoLocalSirena (void);
 		String GetSirenaLocal (void) { return ( lSirenaLocal ? "1" : "0" ); };		
-		void EnableSirena (void) { lSirena = 1 ; };
-		void DisableSirena (void) { lSirena = 0 ; };
+		void EnableSirena (void);
+		void DisableSirena (void);
 		String GetSirenaEnable (void) { return ( lSirena ? "1" : "0" ); };
+		void LeeEstadoSirena (byte bConfiguracion);
 
 		//------------------------
 		//Codigo de las funciones 
@@ -83,6 +89,8 @@
 	    void SirenaLocalOn (void)
 	    {
 	    	lSirenaLocal = 1;
+			GrabaConfiguracionDispositivo ( PosEnableSirenaLocalCfg, lSirenaLocal);
+
 		}
     	/**
 	    ******************************************************
@@ -93,8 +101,51 @@
 	    void SirenaLocalOff (void)
 	    {
 	    	lSirenaLocal = 0;
+			GrabaConfiguracionDispositivo ( PosEnableSirenaLocalCfg, lSirenaLocal);
 		}
 
+		/**
+		******************************************************
+		* @brief Habilita la sirena
+		*
+		*/
+		void EnableSirena (void)
+		{
+			lSirena = 1;
+			GrabaConfiguracionDispositivo ( PosEnableSirenaCfg, lSirena);
+		}	
+		/**
+		******************************************************
+		* @brief Deshabilita la sirena
+		*
+		* Devuelve 1 si la baliza detecta keybt, 0 en caso contrario
+		*/
+		void DisableSirena (void)
+		{
+			lSirena = 0;
+			GrabaConfiguracionDispositivo ( PosEnableSirenaCfg, lSirena);
+		}					
+		/**
+		******************************************************
+		* @brief lee el estado de EnableSirena alamacenado en servidor
+		*
+		*/
+		void LeeEstadoSirena (byte bConfiguracion)
+		{
+			if ( bitRead (bConfiguracion, PosEnableSirenaCfg ))
+			{
+				lSirena = 1;
+			}else{
+				lSirena = 0;
+			}
+			if ( bitRead (bConfiguracion, PosEnableSirenaLocalCfg ))
+			{
+				lSirenaLocal = 1;
+			}else{
+				lSirenaLocal = 0;
+			}
+
+		}
 #endif
 
 

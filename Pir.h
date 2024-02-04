@@ -12,6 +12,7 @@
 	#define PIR_H
 
 		#include "Arduino.h"
+		#include "Global.h"
 
         #include "IO.h"
 
@@ -25,13 +26,16 @@
         boolean lIntPir = 0;					//Flag que con 1 indica si ha habido interrupción de Pir 
         boolean lIntPirAnterior = 0;			//Flag que sirve para validar la interrupoción una vez en el bucle
         unsigned long nMilisegundosNoPir = 0;	//Variable que contiene el tiempo entre dispartos del pir
-		
+		#define PosEnablePirCfg	1				//Bit que indica la posicion de EnablePir en el byte de condiguracion
+
+
 		//------------------------
 		//Declaracion de funciones 
 		//------------------------
         void EnablePir (void);
         void DisablePir (void);
         String GetPir (void) { return ( lPir ? "1" : "0" ); };
+		void LeeEstadoEnablePir (byte bConfiguracion );
         void ArmaPir (void);
         void DesarmaPir (void);
 
@@ -56,6 +60,7 @@
 			}else{
 	    		attachInterrupt(digitalPinToInterrupt(PinPir), IntPir,  FALLING);
 			}
+			GrabaConfiguracionDispositivo ( PosEnablePirCfg, lPir);			
 		}
 	    /**
 	    ******************************************************
@@ -67,10 +72,24 @@
 	    {
 	    	lPir = 0;
 	    	detachInterrupt(digitalPinToInterrupt(PinPir));
+			GrabaConfiguracionDispositivo ( PosEnablePirCfg, lPir);			
 	    }    
-    
-	    /**
-	    ******************************************************
+		/**
+		******************************************************
+		* @brief configura estado de EnablePir en funcion del Byte configuracion
+		*
+		* @param.- bConfiguracion.- Byte con el contenido de Configuracion
+		*/
+		void LeeEstadoEnablePir (byte bConfiguracion )
+		{
+			if ( bitRead (bConfiguracion, PosEnablePirCfg ))
+			{
+				lPir = 1;
+			}else{
+				lPir = 0;
+			}
+		}
+		/**********************************
 	    * @brief Arma el Pir
 	    *
 	    * aabilita la interrupción del pir

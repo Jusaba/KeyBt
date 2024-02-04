@@ -22,6 +22,8 @@
 		#include <BLEEddystoneTLM.h>
 		#include <BLEBeacon.h>
 
+		#include "Global.h"
+
         #include "IO.h"
 		#include "Led.h"
 
@@ -60,6 +62,7 @@
     
 	    String cKey;							//Variable donde se almacena el Code Key, patron de validación de llaves
 
+		#define PosEnablekeyBtCfg	0			//Bit que indica la posicion de EnableKeyBt en el byte de condiguracion
 		//------------------------
 		//Declaracion de funciones 
 		//------------------------
@@ -79,9 +82,10 @@
 		boolean KeyBtGetKeyRemoto();
 
 	
-		void EnableKeyBt (void) { lKeyBt = 1; };
-		void DisableKeyBt (void) { lKeyBt = 0; };
+		void EnableKeyBt (void);
+		void DisableKeyBt (void);
 		String GetKeyBt (void) { return ( lKeyBt ? "1" : "0" ); };
+		void LeeEstadoEnablekeyBt (byte bConfiguracion );
 
 		//*Funciones para Debug
 		void printcUUID (String cUUID, BLEBeacon oBeacon, BLEAdvertisedDevice advertisedDevice);
@@ -399,6 +403,41 @@ cSalida = "comando-:-exec-:-"+cDispositivo+"O";
 		{
 			return ( lBotonRemoto );
 		}		
+		/**
+		******************************************************
+		* @brief Habilita la deteccion bluettoth
+		*
+		*/
+		void EnableKeyBt (void)
+		{
+			lKeyBt = 1;
+			GrabaConfiguracionDispositivo ( PosEnablekeyBtCfg, lKeyBt);
+		}	
+		/**
+		******************************************************
+		* @brief Deshabilita la deteccion bluettoth
+		*
+		*/
+		void DisableKeyBt (void)
+		{
+			lKeyBt = 0;
+			GrabaConfiguracionDispositivo ( PosEnablekeyBtCfg, lKeyBt);
+		}		
+		/**
+		******************************************************
+		* @brief configura estado de EnableKeyBt en funcion del Byte configuracion
+		*
+		* @param.- bConfiguracion.- Byte con el contenido de Configuracion
+		*/
+		void LeeEstadoEnablekeyBt (byte bConfiguracion )
+		{
+			if ( bitRead (bConfiguracion, PosEnablekeyBtCfg ))
+			{
+				lKeyBt = 1;
+			}else{
+				lKeyBt = 0;
+			}
+		}
 		/**
 		******************************************************
 		* @brief Funcion que imprime los datos de un bloque UUID
