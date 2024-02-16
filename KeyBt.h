@@ -85,7 +85,7 @@
 		void EnableKeyBt (void);
 		void DisableKeyBt (void);
 		String GetKeyBt (void) { return ( lKeyBt ? "1" : "0" ); };
-		void LeeEstadoEnablekeyBt (byte bConfiguracion );
+		void LeeEstadoKeyBt (byte bConfiguracion );
 
 		//*Funciones para Debug
 		void printcUUID (String cUUID, BLEBeacon oBeacon, BLEAdvertisedDevice advertisedDevice);
@@ -429,7 +429,7 @@ cSalida = "comando-:-exec-:-"+cDispositivo+"O";
 		*
 		* @param.- bConfiguracion.- Byte con el contenido de Configuracion
 		*/
-		void LeeEstadoEnablekeyBt (byte bConfiguracion )
+		void LeeEstadoKeyBt (byte bConfiguracion )
 		{
 			if ( bitRead (bConfiguracion, PosEnablekeyBtCfg ))
 			{

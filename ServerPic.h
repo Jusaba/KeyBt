@@ -126,6 +126,8 @@
 	//----------------------------
 
 	byte Configuracion;
+	int nConfiguracion;
+	String cConfiguracion;
 
 	//----------------------------
 	//Declaracion de variables PARTICULARES
@@ -198,14 +200,16 @@
 	{
 		Configuracion = LeeVariable ( "Configuracion");
 		#ifdef KeyMaster
-			LeeEstadoEnablekeyBt (Configuracion);
+			LeeEstadoKeyBt (Configuracion);
 		#endif	
-		#ifdef KeyMaster
-			LeeEstadoEnablekeyBt (Configuracion);
+		#ifdef KeyEslave
+			LeeEstadoKeyBt (Configuracion);
 		#endif	
 		#ifdef Pir
+			LeeEstadoPir (Configuracion);
 		#endif
 		#ifdef Sirena
+			LeeEstadoSirena (Configuracion);
 		#endif
 		
 

@@ -35,7 +35,7 @@
         void EnablePir (void);
         void DisablePir (void);
         String GetPir (void) { return ( lPir ? "1" : "0" ); };
-		void LeeEstadoEnablePir (byte bConfiguracion );
+		void LeeEstadoPir (byte bConfiguracion );
         void ArmaPir (void);
         void DesarmaPir (void);
 
@@ -80,7 +80,7 @@
 		*
 		* @param.- bConfiguracion.- Byte con el contenido de Configuracion
 		*/
-		void LeeEstadoEnablePir (byte bConfiguracion )
+		void LeeEstadoPir (byte bConfiguracion )
 		{
 			if ( bitRead (bConfiguracion, PosEnablePirCfg ))
 			{

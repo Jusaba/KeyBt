@@ -85,7 +85,7 @@ void setup() {
                 {
                     GrabaVariable ("inicios", 1 + LeeVariable("inicios") );
                 }
-                
+                LeeConfiguracionDispositivo();              //Cargamos el estado de los dispositivos garbado en Servidor
             }
         } 
     }
@@ -143,22 +143,36 @@ void setup() {
   { 
     if ( lIntPir == 1 &&  !lIntPirAnterior )
     {
-      Serial.println ("Alarma pir");
+      #ifdef Debug
+        Serial.println ("Alarma pir");
+      #endif  
       lIntPirAnterior = 1;
+      cSalida = "PirOn";
+      EnviaValor (cSalida);             //Actualizamos ultimo valor
+      cSalida = String(' ');            //Limpiamos cSalida 
+
       if (lSirena && lSirenaLocal)
       {
 			  nTiempoOn =  5;
 			  lOnTemporizado = 1;		
 			  nMilisegundosOn = millis();		
+        cSalida = "SirenaOn";
+        EnviaValor (cSalida);             //Actualizamos ultimo valor
+        cSalida = String(' ');            //Limpiamos cSalida 
         SirenaOn();
       }
       
     }
     if ( lIntPir == 1 && ( millis() > nMilisegundosNoPir + TiempoNoPir ) )
     {
-Serial.println("Suuuuuu");
+        #ifdef Debug                                                
+            Serial.println("Fin emporización del pir");
+        #endif    
       lIntPirAnterior = 0;
       lIntPir = 0;
+      cSalida = "PirOff";
+      EnviaValor (cSalida);             //Actualizamos ultimo valor
+      cSalida = String(' ');            //Limpiamos cSalida 
       ArmaPir();
     }
   }
@@ -172,7 +186,7 @@ Serial.println("Suuuuuu");
 			if ( millis() > nMilisegundosOn + (nTiempoOn * 1000 ))
 			{
 				SirenaOff();	
-				cSalida = "Off";
+				cSalida = "SirenaOff";
 				EnviaValor (cSalida);
 				cSalida = String(' ');
 				lOnTemporizado = 0;
@@ -194,7 +208,9 @@ Serial.println("Suuuuuu");
       {
         lConexionPerdida = 1;                                 //Ponemos el flag de perdida conexion a 1
       }else{                                                  //Si existe conexion
-             
+        nConfiguracion  = LeeVariable("Configuracion");
+        cConfiguracion = ((String) nConfiguracion);
+        MensajeServidor((String)"Estado-:-Configuracion-:-"+(String) nConfiguracion);
       } 
     } 
   }
@@ -311,6 +327,8 @@ Serial.println("Suuuuuu");
       * Ordenes Pir
       * EnablePir.- Habilita el Pir
       * DisablePir.- Deshabilita el Pir
+      * EnablePirSirena.- Habilita Pir y SirenaLocal
+      * DisablePirSirena.- Deshabilita Pir y SirenaLocal
       * GetPir.- Devuelve con 1 o 0 si el Pir está Habilitado o Deshabilitado
       */
 
@@ -322,6 +340,19 @@ Serial.println("Suuuuuu");
 	  	{
         DisablePir();
       }  
+      if (oMensaje.Mensaje == "EnablePirSirena")		//Si se recibe DisablePir
+	  	{      
+        EnablePir();
+        delay(250);
+        SirenaLocalOn();
+       }  
+      if (oMensaje.Mensaje == "DisablePirSirena")		//Si se recibe DisablePir
+	  	{
+        DisablePir();
+        delay(250);
+        SirenaLocalOff();
+      }  
+
       if (oMensaje.Mensaje == "GetPir")							  //Si se recibe GetPir
 	  	{
         cSalida = GetPir ();
@@ -393,6 +424,8 @@ Serial.println("Suuuuuu");
         if (oMensaje.Mensaje == "SirenaOff")					    //Si se recibe SirenaOff
 	  	  {
           SirenaOff();
+          lOnTemporizado = 0;
+          cSalida = "SirenaOff";
         }  
 			  if ((oMensaje.Mensaje).indexOf("SirenaFlash") == 0)					//Si se recibe "SirenaFlash"
 			  {
@@ -408,7 +441,7 @@ Serial.println("Suuuuuu");
 			  		nTiempoFlashOn = tFlashOn;
 			  		nTiempoFlashOff = tFlashOff;
 			  	}	
-			  	cSalida = "On";
+			  	cSalida = "SirenaOn";
 			  	EnviaValor (cSalida);
 			  	while ( nFlash > 0 )
 			  	{
@@ -418,7 +451,7 @@ Serial.println("Suuuuuu");
 			  		delay(nTiempoFlashOff*100);	
 			  		nFlash--;
 			  	}
-			  	cSalida = "Off";
+			  	cSalida = "SirenaOff";
 			  	EnviaValor (cSalida);
 			  }	
         if (oMensaje.Mensaje == "GetSirenaSuena")					//Si se recibe GetSirenaSuena
