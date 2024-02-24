@@ -33,9 +33,11 @@ void setup() {
   EEPROM.begin(256);                                          //Reservamos zona de EEPROM
   //BorraDatosEprom ( 0, 256 );                                 //Borramos n bytes empezando en la posicion 0   
 
-  pinMode (PinLed, OUTPUT);                             
   pinMode (PinReset, INPUT_PULLUP);                           //Configuramos el pin de reset como entrada
 
+  #ifdef Led
+    pinMode (PinLed, OUTPUT);                             
+  #endif
   #ifdef Pir
     pinMode (PinPir, INPUT_PULLUP);
   #endif
