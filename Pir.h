@@ -13,6 +13,7 @@
 
 		#include "Arduino.h"
 		#include "Global.h"
+		#include "Sirena.h"
 
         #include "IO.h"
 
@@ -39,6 +40,8 @@
         void ArmaPir (void);
         void DesarmaPir (void);
 
+		void Pir_Loop (String cDispositivo);
+		
         void IRAM_ATTR IntPir(void);
 
 		//------------------------
@@ -127,4 +130,59 @@
 	    	nMilisegundosNoPir = millis();
 	    }	
     
+	    /**
+	    ******************************************************
+	    * @brief Funcion de Atencion al Pir
+		* 
+		* Comprueba si el estado actual es 1 y es diferente al estado anterior, si es asi, Envia al servidor
+		* el texto PirOn, modifica el estado anterior al actual ( para que no se vuelva a repetir la accion )
+		* y manda ejecutar la lista de comandos <cDispositivo> + 'P' donde pueden grabarse las acciones a ejecutar
+		* cuando hay alarma de Pir.
+		* Si esta habilitada la sirena y ademas esta habilitada la sirena local, rersetea el contador nMilisegundosOn
+		* envia al servidor el texto SirenaOn y pone en marcha la sirena empezando a soonar 
+	    *
+		* Por otro lado, comprueba si desde que se activo el PIr ha transcurrido un tiempo TeimpoNOPir
+		* para resetear los flag del pir, enviar al servidor el texto PirOff y 'Armar' el Pir 
+	    * Deshabilita la interrupción del pir
+		* 
+		* @param cDispositivo.- Nombre del dispositivo que utilizará para ejecutar la lista de comandos que le toca a este dispositivo
+	    */
+		void Pir_Loop (String cDispositivo)
+		{
+			if ( lIntPir == 1 &&  !lIntPirAnterior )
+    		{
+    	  		#ifdef Debug
+    	    		Serial.println ("Alarma pir");
+    	  		#endif  
+    	  		lIntPirAnterior = 1;
+    	  		cSalida = "PirOn";
+    	  		EnviaValor (cSalida);             //Actualizamos ultimo valor
+    	  		cSalida = String(' ');            //Limpiamos cSalida 
+    	  		cSalida = "comando-:-exec-:-"+cDispositivo + String("P");
+   				MensajeServidor(cSalida);
+    	  		if (lSirena && lSirenaLocal)
+    	  		{
+				  nTiempoOn =  5;
+				  lOnTemporizado = 1;		
+				  nMilisegundosOn = millis();		
+    	    	  cSalida = "SirenaOn";
+    	    	  EnviaValor (cSalida);             //Actualizamos ultimo valor
+    	    	  cSalida = String(' ');            //Limpiamos cSalida 
+    	    	  SirenaOn();
+    	  		}
+	
+    		}
+    		if ( lIntPir == 1 && (TestTemporizacion( nMilisegundosNoPir, TiempoNoPir ) ) )
+    		{
+    	    	#ifdef Debug                                                
+    	    	    Serial.println("Fin emporización del pir");
+    	    	#endif    
+    	  		lIntPirAnterior = 0;
+    	  		lIntPir = 0;
+    	  		cSalida = "PirOff";
+    	  		EnviaValor (cSalida);             //Actualizamos ultimo valor
+    	  		cSalida = String(' ');            //Limpiamos cSalida 
+    	  		ArmaPir();
+    		}
+		}
 #endif

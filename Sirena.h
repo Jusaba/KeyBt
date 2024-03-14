@@ -15,6 +15,7 @@
 		#include "Global.h"
 
         #include "IO.h"
+		#include "Luz.h"
 
 		//---------------------------------------
 		//Definiciones y declaracion de variables 
@@ -54,6 +55,8 @@
 		String GetSirenaEnable (void) { return ( lSirena ? "1" : "0" ); };
 		void LeeEstadoSirena (byte bConfiguracion);
 
+		void Sirena_Loop (void);
+
 		//------------------------
 		//Codigo de las funciones 
 		//------------------------
@@ -62,22 +65,32 @@
 	    ******************************************************
 	    * @brief Hace sonar la sirena
 	    *
-	    * Pone a 1 el flag lSirenaOn y habilita su interrupción
+	    * Pone a 1 el flag lSirenaOn y pone en marcha la sirena
 	    */
 	    void SirenaOn (void)
 	    {
-	    	lSirenaOn = 1;
+	    	lSirenaOn = 1;																	//Flag lSirena a 1
+			if ( lLuzLocal )																//Si esta habilitada la luz con sirena
+			{
+				nTempoDestello = TiempoDestelloFast;										//Destello rápido	
+				EnableLuz();																//Habilitar la luz
+			}			
 			LogicaSirena ? digitalWrite(PinSirena, HIGH) : digitalWrite(PinSirena, LOW);	    
 		}
     	/**
 	    ******************************************************
 	    * @brief Hace sonar la sirena
 	    *
-	    * Pone a 0 el flag lSirenaOn y deshabilita su interrupción
+	    * Pone a 0 el flag lSirenaOn apaga la sirena
 	    */
 	    void SirenaOff (void)
 	    {
-	    	lSirenaOn = 0;
+	    	lSirenaOn = 0;																	//Flag lSirena a 0
+			if ( lLuzLocal )																//Si esta habilitada la luz con sirena
+			{
+				nTempoDestello = TiempDestello;
+				DisableLuz();																//Deshabilitar la luz
+			}
 			LogicaSirena ? digitalWrite(PinSirena, LOW) : digitalWrite(PinSirena,HIGH);	    
 		}
    		/**
@@ -123,7 +136,10 @@
 		void DisableSirena (void)
 		{
 			lSirena = 0;
+			lLuzLocal = 0;
+			ModificaConfiguracionDispositivo( PosEnableLuzLocalcfg, lLuzLocal );
 			GrabaConfiguracionDispositivo ( PosEnableSirenaCfg, lSirena);
+			
 		}					
 		/**
 		******************************************************
@@ -145,6 +161,32 @@
 				lSirenaLocal = 0;
 			}
 
+		}
+		/**
+		******************************************************
+		* @brief Comprueba si ha finalizado la temporizacion de la Sirena On
+		*
+		*/
+		void Sirena_Loop (void)
+		{
+			if ( lOnTemporizado )											//Si la sirena esta sonando y tiene que temporizar
+			{
+      			if (TestTemporizacion( nMilisegundosOn, nTiempoOn * 1000))	//Comprobamos si ha transcurrido el tiempo de temporizacion fijado
+				{															//Y si ha transcurrido...
+					SirenaOff();											//Apagamos la sirena
+			    	if ( lLuzLocal )																//Si esta habilitada la luz con sirena
+			    	{
+						nTempoDestello = TiempDestello;
+						DisableLuz();																//Deshabilitar la luz
+				    	cSalida = "OffSirenaLuz";						  	//Mandaremos el texto OnSirenaLuz como ultimo valor
+			    	}else{
+				    	cSalida = "SirenaOff";								//Mandamos el texto SirenaOn como ultimo valor
+			    	}					
+					EnviaValor (cSalida);
+					cSalida = String(' ');
+					lOnTemporizado = 0;										//Reseteamos el flag que indica que hay temporizacion
+				}
+			} 
 		}
 #endif
 

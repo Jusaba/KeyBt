@@ -38,6 +38,9 @@ void setup() {
   #ifdef Led
     pinMode (PinLed, OUTPUT);                             
   #endif
+  #ifdef Luz
+    pinMode (PinLuz, OUTPUT);                             
+  #endif
   #ifdef Pir
     pinMode (PinPir, INPUT_PULLUP);
   #endif
@@ -74,9 +77,11 @@ void setup() {
                   { 
                     int nPos_ = (cDispositivo).indexOf("_");
                     cDispositivoMaestro = ((cDispositivo).substring(0, nPos_))+"m";
-                    Serial.println("--------------------------");
-                    Serial.println(cDispositivoMaestro);
-                    Serial.println("--------------------------");
+                    #ifdef Debug  
+                      Serial.println("--------------------------");
+                      Serial.println(cDispositivoMaestro);
+                      Serial.println("--------------------------");
+                    #endif
                   }
                 #endif  
 
@@ -108,92 +113,21 @@ void setup() {
     /*----------------
     Comprobacion 
     ------------------*/
-  if (lKeyBt)                                                            //Si esta habilitado la detección Bluetooth
+  if (lKeyBt)                         //Si esta habilitado la detección Bluetooth
   {
-    #ifdef KeyMaster    
-    if ( millis() > nMiliSegundosTestRemoto + TiempoTestbtnOnRemoto )     //Si ha trancurrido el tiempo de Test de deteccion de los remomtos
-      {
-        lBotonRemoto = 0;                                                 //Ponemos el Flag de deteccion de boton remoto a 0
-        nMiliSegundosTestRemoto = millis();                               //Reseteamos el contador de tiempo de deteccion de remotos
-      }
-    #endif
-    #ifdef KeySlave
-    if ( millis() > nMiliSegundosInfoRemoto + TiempoTestbtnOnRemoto - 5000 )     //Si ha trancurrido el tiempo de envio estado a Master
-    {
-				if ( lEstadoLocal )											                                 //Si se ha detectado boton el este remoto
-				{
-					cSalida = "mensaje-:-"+cDispositivoMaestro+"-:-KeyOn";	                 //Mandamos mensaje On a master 
-				}else{														                                       //Si no se ha detectado borton en este remoto
-					cSalida = "mensaje-:-"+cDispositivoMaestro+"-:-KeyOff";	               //Mandamos mensaje Off a master
-				}
-				MensajeServidor(cSalida);				
-				cSalida = String(' ');
-        nMiliSegundosInfoRemoto = millis();
-    }    
-    #endif
-    if ( millis() > nMiliSegundosTestbtn + nTiempoTestbtn )               //Si ha trnascurrido el tiempo para testear localmente si existe boton
-    {
-      Scan();
-      if (TestCambioEstadoLocal(lBoton))                                  //Comproamos si ha habido cambio de estado en la deteccion de boton
-      {
-        Serial.println("*************** Cambio de estado ");
-      }
-      nMiliSegundosTestbtn = millis();                                    //Reseteamos el contador de testeo de boton
-    }
+    KeyBt_Loop(cDispositivoMaestro);  //Comprobamso el estado de los remotos y el local y escaneamos el bluetooth si la temporización así lo determina
   }
   if ( lPir )
   { 
-    if ( lIntPir == 1 &&  !lIntPirAnterior )
-    {
-      #ifdef Debug
-        Serial.println ("Alarma pir");
-      #endif  
-      lIntPirAnterior = 1;
-      cSalida = "PirOn";
-      EnviaValor (cSalida);             //Actualizamos ultimo valor
-      cSalida = String(' ');            //Limpiamos cSalida 
-
-      if (lSirena && lSirenaLocal)
-      {
-			  nTiempoOn =  5;
-			  lOnTemporizado = 1;		
-			  nMilisegundosOn = millis();		
-        cSalida = "SirenaOn";
-        EnviaValor (cSalida);             //Actualizamos ultimo valor
-        cSalida = String(' ');            //Limpiamos cSalida 
-        SirenaOn();
-      }
-      
-    }
-    if ( lIntPir == 1 && ( millis() > nMilisegundosNoPir + TiempoNoPir ) )
-    {
-        #ifdef Debug                                                
-            Serial.println("Fin emporización del pir");
-        #endif    
-      lIntPirAnterior = 0;
-      lIntPir = 0;
-      cSalida = "PirOff";
-      EnviaValor (cSalida);             //Actualizamos ultimo valor
-      cSalida = String(' ');            //Limpiamos cSalida 
-      ArmaPir();
-    }
+    Pir_Loop(cDispositivo);           //Comprobamos si hay alarma de Pir y desencadenamos acciones
   }
   if (lSirena)
   {
- 		/*----------------
- 		Comprobacion tiempo SirenaOn temporizado
- 		------------------*/
-		if ( lOnTemporizado )
-		{
-			if ( millis() > nMilisegundosOn + (nTiempoOn * 1000 ))
-			{
-				SirenaOff();	
-				cSalida = "SirenaOff";
-				EnviaValor (cSalida);
-				cSalida = String(' ');
-				lOnTemporizado = 0;
-			}
-		} 
+    Sirena_Loop();                    //Comprobamos la temporizacion de la sirena sonando   
+  }
+  if (lLuz)
+  {
+    Luz_Loop();
   }
   /*----------------
   Comprobacion Conexion
@@ -247,7 +181,9 @@ void setup() {
         Serial.println(oMensaje.Remitente);           //Ejecutamos acciones
         Serial.println(oMensaje.Mensaje);
       #endif  
-      if (lKeyBt)
+      if (lAlarma)
+      {  
+         if (lKeyBt)
       {
    		  #ifdef KeyMaster
            if (oMensaje.Mensaje == "KeyOn")							//Si se recibe 'KeyOn'  
@@ -288,7 +224,7 @@ void setup() {
           cSalida = String(' ');                      //Limpiamos cSalida 
         }        
       }  
-			if ((oMensaje.Mensaje).indexOf("SetCodeKey-:-") == 0) // Si se recibe una orden de "SetCodeKey-:-", se graba en EEPROM el CodeKey
+		    	if ((oMensaje.Mensaje).indexOf("SetCodeKey-:-") == 0) // Si se recibe una orden de "SetCodeKey-:-", se graba en EEPROM el CodeKey
       {
 	  		String cCodeKey = String(oMensaje.Mensaje).substring(3 + String(oMensaje.Mensaje).indexOf("-:-"), String(oMensaje.Mensaje).length()); // Extraemos segundo parametro pasado
         SetCodeKey(cCodeKey);
@@ -299,23 +235,23 @@ void setup() {
 		  	EnviaMensaje(oMensaje);									    //Y lo enviamos
         cSalida = String(' ');                      //Limpiamos cSalida 
       }
-      if (oMensaje.Mensaje == "GetCodeKey")				  //Si se recibe GetCodeKey
+         if (oMensaje.Mensaje == "GetCodeKey")				  //Si se recibe GetCodeKey
 	  	{	  
         oMensaje.Mensaje = cKey;                    //Cogemos el Code JKey
 	  		oMensaje.Destinatario = oMensaje.Remitente;
 		  	EnviaMensaje(oMensaje);									    //Y lo enviamos
       }
 
-      if (oMensaje.Mensaje == "EnableKeyBt")					//Si se recibe EnableKeyBt
+         if (oMensaje.Mensaje == "EnableKeyBt")					//Si se recibe EnableKeyBt
 	  	{
         EnableKeyBt();
       }  
-      if (oMensaje.Mensaje == "DisableKeyBt")					//Si se recibe DisableKeyBt
+         if (oMensaje.Mensaje == "DisableKeyBt")					//Si se recibe DisableKeyBt
 	  	{
         DisableKeyBt();
       }  
 
-      if (oMensaje.Mensaje == "GetKeyBt")							  //Si se recibe GetKeyBt
+         if (oMensaje.Mensaje == "GetKeyBt")							  //Si se recibe GetKeyBt
 	  	{
         cSalida = GetKeyBt ();
   			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
@@ -325,68 +261,66 @@ void setup() {
 
       }  
 
-      /*****************************************************
-      * Ordenes Pir
-      * EnablePir.- Habilita el Pir
-      * DisablePir.- Deshabilita el Pir
-      * EnablePirSirena.- Habilita Pir y SirenaLocal
-      * DisablePirSirena.- Deshabilita Pir y SirenaLocal
-      * GetPir.- Devuelve con 1 o 0 si el Pir está Habilitado o Deshabilitado
-      */
+         /*****************************************************
+         * Ordenes Pir
+         * EnablePir.- Habilita el Pir
+         * DisablePir.- Deshabilita el Pir
+         * EnablePirSirena.- Habilita Pir y SirenaLocal
+         * DisablePirSirena.- Deshabilita Pir y SirenaLocal
+         * GetPir.- Devuelve con 1 o 0 si el Pir está Habilitado o Deshabilitado
+         */
 
-      if (oMensaje.Mensaje == "EnablePir")					//Si se recibe EnablePir
-	  	{
-        EnablePir();
-      }  
-      if (oMensaje.Mensaje == "DisablePir")					//Si se recibe DisablePir
-	  	{
-        DisablePir();
-      }  
-      if (oMensaje.Mensaje == "EnablePirSirena")		//Si se recibe DisablePir
-	  	{      
-        EnablePir();
-        delay(250);
-        SirenaLocalOn();
-       }  
-      if (oMensaje.Mensaje == "DisablePirSirena")		//Si se recibe DisablePir
-	  	{
-        DisablePir();
-        delay(250);
-        SirenaLocalOff();
-      }  
+          if (oMensaje.Mensaje == "EnablePir")					//Si se recibe EnablePir
+	  	  {
+          EnablePir();
+        }  
+           if (oMensaje.Mensaje == "DisablePir")					//Si se recibe DisablePir
+	  	  {
+          DisablePir();
+        }  
+           if (oMensaje.Mensaje == "EnablePirSirena")		//Si se recibe DisablePir
+	  	  {      
+          EnablePir();
+          delay(250);
+          SirenaLocalOn();
+         }  
+           if (oMensaje.Mensaje == "DisablePirSirena")		//Si se recibe DisablePir
+	  	  {
+          DisablePir();
+          delay(250);
+          SirenaLocalOff();
+        }  
+           if (oMensaje.Mensaje == "GetPir")							  //Si se recibe GetPir
+	  	  {
+          cSalida = GetPir ();
+  		  	oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  	  	oMensaje.Destinatario = oMensaje.Remitente;
+		    	EnviaMensaje(oMensaje);									        //Y lo enviamos
+          cSalida = String(' ');                          //Limpiamos cSalida 
+        }  
 
-      if (oMensaje.Mensaje == "GetPir")							  //Si se recibe GetPir
-	  	{
-        cSalida = GetPir ();
-  			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
-	  		oMensaje.Destinatario = oMensaje.Remitente;
-		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
-        cSalida = String(' ');                          //Limpiamos cSalida 
-
-      }  
-
-      /*****************************************************
-      * Ordenes Sirena
-      * EnableSirena.- Habilita la sirena
-      * DisableSirena.- Deshabilita la sirena
-      * GetSirenaEnable.- Devuelve con 1 o 0 si la sirena está Habilitada o Deshabilitada
-      * SierenaOn.- Suena sirena permanentemente o durante un tiempo  determinado pasado como parametro
-      * SirenaOff.- La sirena deja de sonar
-      * SirenaFlash.- Hace sonar la sirena a rafagas
-      * GetSirenaSuena.- Devuelve con 1 o 0 si la sirena esta sonando o no 
-      * SirenaLocalOn.- Habilita la sirena para ser utilizada localmente
-      * SirenaLocalOff.- Deshabilita la sirena para ser utilizada localmente
-      * GetSirenaLocal.- Devuelve con 1 o 0 si la sirena esta habilitada o no para usarse loclamente 
-      */
-      if (oMensaje.Mensaje == "EnableSirena")					//Si se recibe EnableSirena
+         /*****************************************************
+         * Ordenes Sirena
+         * EnableSirena.- Habilita la sirena
+         * DisableSirena.- Deshabilita la sirena
+         * GetSirenaEnable.- Devuelve con 1 o 0 si la sirena está Habilitada o Deshabilitada
+         * SirenaOn.- Suena sirena permanentemente o durante un tiempo  determinado pasado como parametro
+         * SirenaOff.- La sirena deja de sonar
+         * SirenaFlash.- Hace sonar la sirena a rafagas
+         * GetSirenaSuena.- Devuelve con 1 o 0 si la sirena esta sonando o no 
+         * SirenaLocalOn.- Habilita la sirena para ser utilizada localmente
+         * SirenaLocalOff.- Deshabilita la sirena para ser utilizada localmente
+         * GetSirenaLocal.- Devuelve con 1 o 0 si la sirena esta habilitada o no para usarse loclamente 
+         */
+         if (oMensaje.Mensaje == "EnableSirena")					//Si se recibe EnableSirena
 	  	{
         EnableSirena();
       }  
-      if (oMensaje.Mensaje == "DisableSirena")					//Si se recibe DisableSirena
+         if (oMensaje.Mensaje == "DisableSirena")					//Si se recibe DisableSirena
 	  	{
         DisableSirena();
       }  
-      if (oMensaje.Mensaje == "GetSirenaEnable")			  //Si se recibe GetSirenaEnable
+         if (oMensaje.Mensaje == "GetSirenaEnable")			  //Si se recibe GetSirenaEnable
 	  	{
         cSalida = GetSirenaEnable ();
   			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
@@ -394,24 +328,24 @@ void setup() {
 		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
         cSalida = String(' ');                          //Limpiamos cSalida 
       }  
-      if (oMensaje.Mensaje == "SirenaLocalOn")					//Si se recibe SirenaLocalOn
+         if (oMensaje.Mensaje == "SirenaLocalOn")					//Si se recibe SirenaLocalOn
 	  	{
         SirenaLocalOn();
       }  
-      if (oMensaje.Mensaje == "SirenaLocalOff")					//Si se recibe SirenaLocalOff
+         if (oMensaje.Mensaje == "SirenaLocalOff")					//Si se recibe SirenaLocalOff
 	  	{
         SirenaLocalOff();
       }  
-      if (oMensaje.Mensaje == "GetSirenaLocal")							  //Si se recibe GetSirenaLocal
-	  	{
-        cSalida = GetSirenaLocal ();
-  			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
-	  		oMensaje.Destinatario = oMensaje.Remitente;
-		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
-        cSalida = String(' ');                          //Limpiamos cSalida 
-      }        
-      if (lSirena)
-      {
+         if (oMensaje.Mensaje == "GetSirenaLocal")							  //Si se recibe GetSirenaLocal
+	  	      {
+              cSalida = GetSirenaLocal ();
+  		      	oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  	      	oMensaje.Destinatario = oMensaje.Remitente;
+		        	EnviaMensaje(oMensaje);									        //Y lo enviamos
+              cSalida = String(' ');                          //Limpiamos cSalida 
+            }        
+         if (lSirena)
+        {
 		    if ( (oMensaje.Mensaje).indexOf("SirenaOn") == 0)								//Si se recibe "SirenaOn"
 			  {	
 			  	if ( (oMensaje.Mensaje).indexOf("SirenaOn-:-") == 0)        	//Si se le pasa un parametro es que se quiere temporizar la sirena    
@@ -421,13 +355,23 @@ void setup() {
 			  		nMilisegundosOn = millis();		
 			  	}	  
 			  	SirenaOn();	
-			  	cSalida = "SirenaOn";
-			  }
+			    if ( lLuzLocal )																//Si esta habilitada la luz con sirena
+			    {
+				    cSalida = "OnSirenaLuz";						  				//Mandaremos el texto OnSirenaLuz como ultimo valor
+			    }else{
+				    cSalida = "SirenaOn";													//Mandamos el texto SirenaOn como ultimo valor
+			    }
+ 			  }
         if (oMensaje.Mensaje == "SirenaOff")					    //Si se recibe SirenaOff
 	  	  {
           SirenaOff();
           lOnTemporizado = 0;
-          cSalida = "SirenaOff";
+			    if ( lLuzLocal )																//Si esta habilitada la luz con sirena
+			    {
+				    cSalida = "OffSirenaLuz";						  				//Mandaremos el texto OnSirenaLuz como ultimo valor
+			    }else{
+				    cSalida = "SirenaOff";												//Mandamos el texto SirenaOn como ultimo valor
+			    }
         }  
 			  if ((oMensaje.Mensaje).indexOf("SirenaFlash") == 0)					//Si se recibe "SirenaFlash"
 			  {
@@ -465,6 +409,96 @@ void setup() {
           cSalida = String(' ');                          //Limpiamos cSalida 
         }  
       }
+
+         /*****************************************************
+         * Ordenes Luz
+         * EnableLuz.- Habilita el Luz
+         * DisableLuz.- Deshabilita el Luz
+         * GetLuz.- Devuelve con 1 o 0 si el Luz está Habilitado o Deshabilitado
+         * LuzOn.- Enciende el Luz
+         * LuzOff.- Apaga el Luz
+         * LuzFlash.- Flash de Luz
+         * LuzSirenaOn.- Pone el flag lLuzLocal a 1 para enlazar sirena con Luz
+         * LuzSirenaOff.- Pone el flag lLuzLocal a 0 para desenlazar sirena con Luz
+         * GetLuzSirena.- Devuelve el estado del flag lLuzLocal
+         */
+         if (oMensaje.Mensaje == "LuzOn")					    //Si se recibe LuzOn
+	  	{
+        EnciendeLuz();
+		    cSalida = "LuzOn";
+      }  
+         if (oMensaje.Mensaje == "LuzOff")					    //Si se recibe LuzOff
+	  	{
+        ApagaLuz();
+ 		    cSalida = "LuzOff";
+      } 
+         if (oMensaje.Mensaje == "LuzFlash")					    //Si se recibe LuzFlash
+	  	{
+        FlashLuz();
+      }         
+         if (oMensaje.Mensaje == "EnableLuz")					//Si se recibe EnableLuz
+	  	{
+        EnableLuz();
+      }  
+         if (oMensaje.Mensaje == "DisableLuz")					//Si se recibe DisableLuz
+	  	{
+        DisableLuz();
+      }  
+         if (oMensaje.Mensaje == "GetLuz")							//Si se recibe GetLuz
+	      	{
+           cSalida = GetLuz ();
+  	    		oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	      		oMensaje.Destinatario = oMensaje.Remitente;
+		     	EnviaMensaje(oMensaje);									        //Y lo enviamos
+           cSalida = String(' ');                          //Limpiamos cSalida 
+         }  
+         if (oMensaje.Mensaje == "LuzSirenaOn")					//Si se recibe LuzSirenaOn
+	  	{
+        LuzLocalOn();
+      }  
+         if (oMensaje.Mensaje == "LuzSirenaOff")					//Si se recibe LuzSirenaOff
+	  	{
+        LuzLocalOff();
+      }  
+         if (oMensaje.Mensaje == "GetLuzSirena")					//Si se recibe GetLuzSirena
+	  	{
+        cSalida = GetLuzLocal ();
+  			oMensaje.Mensaje = cSalida;								      	
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									        
+        cSalida = String(' ');                           
+      }  
+    }
+      /*****************************************************
+      * Ordenes General
+      * 
+      * AlarmaEnable.- Habilita la alarma
+      * AlarmaDisable.- Deshabilita la alarma
+      */
+      if (oMensaje.Mensaje == "AlarmaEnable")					    //Si se recibe AlarmaEnable
+	  	{
+        EnableAlarma();
+		    cSalida = "AlarmaEnable";
+      }  
+      if (oMensaje.Mensaje == "AlarmaDisable")				    //Si se recibe AlarmaEnable
+	  	{
+        DisableAlarma();
+		    cSalida = "AlarmaDisable";
+      }  
+      if (oMensaje.Mensaje == "AlarmaDestello")				    //Si se recibe AlarmaDestello
+	  	{
+        //DisableAlarma();
+        Serial.println ("Suuuuuuuuuuuuuuuuuuuuuuuuuuu");
+		    cSalida = "AlarmaDestello";
+      }  
+      if (oMensaje.Mensaje == "AlarmaGet")							//Si se recibe AlarmaGet
+	  	{
+        cSalida = GetAlarma ();
+  			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
+        cSalida = String(' ');                          //Limpiamos cSalida 
+      }      
       /*----------------
       Actualizacion ultimo valor
       ------------------*/

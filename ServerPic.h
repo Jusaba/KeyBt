@@ -61,6 +61,7 @@
 		#define Ino "KeyBtM"					
 		#define ESP32
 		#define Tipo "Baliza"
+		#define Led
 		//-----------------
 		//TiEmpo de rebotes
 		//-----------------
@@ -75,6 +76,7 @@
 		#define Ino "KeyBtE"					
 		#define ESP32
 		#define Tipo "Baliza"
+		#define Led
 		//-----------------
 		//TiEmpo de rebotes
 		//-----------------
@@ -93,6 +95,7 @@
 		#define LogicaPir 1
 		#define Sirena
 		#define LogicaSirena 1
+		#define Luz
 		//-----------------
 		//TiEmpo de rebotes
 		//-----------------
@@ -134,11 +137,24 @@
 	//----------------------------
 	void LeeConfiguracionDispositivo ( void );
 	void GrabaConfiguracionDispositivo ( int nBitDispositivo, boolean lEstado );
-
+	void ModificaConfiguracionDispositivo ( int nBitDispositivo, boolean lEstado );
+	boolean TestTemporizacion ( double nMillisInicio, double nMillisconsigna );
+	
 	#include "IO.h"
+	#include "Alarma.h"
 	#include "KeyBt.h"
-	#include "Pir.h"
-	#include "Sirena.h"
+	#ifdef Pir
+		#include "Pir.h"
+	#endif
+	#ifdef Sirena
+		#include "Sirena.h"
+	#endif
+	#ifdef Luz
+		#include "Luz.h"
+	#endif
+	#ifdef Led
+		#include "Led.h"
+	#endif
 
 	//----------------------------------------------
 	//DEBUG
@@ -230,4 +246,18 @@
 		}
 		GrabaVariable ("Configuracion", Configuracion );
 	}
+	/**
+	******************************************************
+	* @brief Actualiza el byte Configuración en función del dispositivo y el estado del mismo
+	*  
+	*/
+	void ModificaConfiguracionDispositivo ( int nBitDispositivo, boolean lEstado )
+	{
+		if ( lEstado )
+		{
+			bitSet (Configuracion, nBitDispositivo);
+		}else{
+			bitClear (Configuracion, nBitDispositivo);
+		}
+	}	
 #endif

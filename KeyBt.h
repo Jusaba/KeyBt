@@ -25,8 +25,9 @@
 		#include "Global.h"
 
         #include "IO.h"
-		#include "Led.h"
-
+		#ifdef Led 
+			#include "Led.h"
+		#endif
 		//---------------------------------------
 		//Definiciones y declaracion de variables 
 		//---------------------------------------
@@ -43,9 +44,10 @@
 	    #ifdef KeySlave
 	    	unsigned long nMiliSegundosInfoRemoto = 0;		//variable para manejar tiempos de envio mensajes de estado al maestro
 	    	#define CiclosNoDetect	1						//Ciclos de no deteccion del slave para considerar que no hay presencia de boton
-	    	String cDispositivoMaestro = String(' '); 		//Variable donde se almacena el nombre del controlador Master
 	    #endif	
-    
+       	String cDispositivoMaestro = String(' '); 		//Variable donde se almacena el nombre del controlador Master
+														//No se incluye en el  #ifdef KeySlave por que se necesita en el Lopp para llamar a KeyBtr_Loop				
+
 	    boolean lKeyBt = 1;	    				//Flag que habilita/Deshabilita la deteccion de llave bluetooth
 	    int scanTime = 2; 						//Periodo de scaneo
 	    BLEScan *pBLEScan;						//Objeto para el scaneo BLE
@@ -58,7 +60,7 @@
 	    unsigned long nTiempoTestbtn = 0;		//Variable que contiene el tiemp de scaneo ( varia entre TiempoTestbtnOn y TiempoTestbtnOff correspondientes a scaneo lento y rapido)
     
 	    int nContador = 0;						//Contador de veces que no se detecta KeyBt para determinar cuando se considera que no hay KeyBt.
-	    										//Esta variable se usa en el master para dar tiempo a lso exclavos a que refresquen el contador si un exclavo detecta KeyBt
+	    										//Esta variable se usa en el master para dar tiempo a lso Esclavos a que refresquen el contador si un Esclavo detecta KeyBt
     
 	    String cKey;							//Variable donde se almacena el Code Key, patron de validación de llaves
 
@@ -81,6 +83,7 @@
 		boolean KeyBtGetKeyLocal();
 		boolean KeyBtGetKeyRemoto();
 
+		void KeyBt_Loop (String cDispoditivoMaestro);
 	
 		void EnableKeyBt (void);
 		void DisableKeyBt (void);
@@ -265,18 +268,22 @@
 				lBotonRemoto = 0;								//Ponemos a 0 el flag lBotonRemoto para indicar que no hay boton remoto detectado
 				lEstadoLocal = 0;								//Ponemos a 0 el flag lEstadoLocal para indicar que no hay boton local ni remoto detectado
 				nTiempoTestbtn = TiempoTestbtnOff;				//Ponemos tiempo de escaneo rapido		
-				ApagaLed();										//Apagamos el led para indicar que no se detecta boton en el sistema
+				#ifdef Led
+					ApagaLed();									//Apagamos el led para indicar que no se detecta boton en el sistema
+				#endif	
 			}			
 		}else{													//Si se detecta boton en local o en remoto
 			lEstadoLocal = 1;									//Ponemos a 1 el flag lEstadoLocal para indicar que hay boton local o remoto detectado, es decir, ha boton detectado en el sistema
 			nContador = 0;										//Reseteamos el contador de no deteccion
 			nTiempoTestbtn = TiempoTestbtnOn;					//Fijamos un tiempo de escaneo lento
-			if (lEstadoBotonLocal)								//Si hay boton local detectado
-			{
-				EnciendeLed();									//Encendemos el led
-			}else{												//Si solo es el remoto
-				FlashLed();										//Hacemos un flash
-			}	
+			#ifdef Led
+				if (lEstadoBotonLocal)							//Si hay boton local detectado
+				{
+					EnciendeLed();								//Encendemos el led
+				}else{											//Si solo es el remoto
+					FlashLed();									//Hacemos un flash
+				}	
+			#endif	
 		}	
 	}
 	/**
@@ -440,6 +447,58 @@ cSalida = "comando-:-exec-:-"+cDispositivo+"O";
 		}
 		/**
 		******************************************************
+		* @brief Funcion con dos comportamientos distintos
+		* En caso del Maestro, comprueba que no haya pasado la temporizacion sin noticias de lso remotos y pone el flag lBotonRemoto a 0 si se ha excedido
+		* En caso del Esclavo, Cada lBotonRemoto - 5000 msg informa a su maestro de como está este remoto
+		* Luego, en ambos casos, se comrprueba si ha transcurrido la temporizacion de escaneo de botones y si es asi, escanea	
+		*
+		* @param.- cDispoditivoMaestro.- Nombre del maestro al que el escalvo debe informardebe comunicar in
+		*/		
+		void KeyBt_Loop (String cDispoditivoMaestro)
+		{
+			#ifdef KeyMaster
+	    		if ( TestTemporizacion ( nMiliSegundosTestRemoto,  TiempoTestbtnOnRemoto ))     //Si ha trancurrido el tiempo de Test de deteccion de los remomtos
+    	  		{
+        			lBotonRemoto = 0;                                                 //Ponemos el Flag de deteccion de boton remoto a 0
+        			nMiliSegundosTestRemoto = millis();                               //Reseteamos el contador de tiempo de deteccion de remotos
+      			}
+			#endif
+			#ifdef KeySlave
+    			if ( millis() > nMiliSegundosInfoRemoto + TiempoTestbtnOnRemoto - 5000 )     //Si ha trancurrido el tiempo de envio estado a Master
+    			{	
+					if ( lEstadoLocal )											                                 //Si se ha detectado boton el este remoto
+					{
+						cSalida = "mensaje-:-"+cDispositivoMaestro+"-:-KeyOn";	                 //Mandamos mensaje On a master 
+					}else{														                                       //Si no se ha detectado borton en este remoto
+						cSalida = "mensaje-:-"+cDispositivoMaestro+"-:-KeyOff";	               //Mandamos mensaje Off a master
+					}
+					MensajeServidor(cSalida);				
+					cSalida = String(' ');
+        			nMiliSegundosInfoRemoto = millis();
+    			}
+			#endif
+    		if ( TestTemporizacion (nMiliSegundosTestbtn, nTiempoTestbtn ))          //Si ha trnascurrido el tiempo para testear localmente si existe boton
+    		{
+      			Scan();
+      			if (TestCambioEstadoLocal(lBoton))                                  //Comproamos si ha habido cambio de estado en la deteccion de boton
+      			{
+					#ifdef KeyMaster
+			          if (KeyBtGetEstado())                            				//Si el sistema tiene detectada presencia de boton
+					  {
+					  }else{
+
+					  }
+					#endif
+
+        			Serial.println("*************** Cambio de estado ");
+				}
+      			nMiliSegundosTestbtn = millis();                                    //Reseteamos el contador de testeo de boton
+  
+			}
+		}			
+
+		/**
+		******************************************************
 		* @brief Funcion que imprime los datos de un bloque UUID
 		*
 		* @param.- cUUID, UUID del que se quieren imprimir los datos
@@ -497,5 +556,6 @@ cSalida = "comando-:-exec-:-"+cDispositivo+"O";
 		  		Serial.println (lBotonLocal);
 			#endif
 		}		
+
 
 #endif
