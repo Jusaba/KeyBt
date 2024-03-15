@@ -474,6 +474,11 @@ void setup() {
       * 
       * AlarmaEnable.- Habilita la alarma
       * AlarmaDisable.- Deshabilita la alarma
+      * GetAlarma.- Devuelve el estado de la alarma
+      * AlarmaDestelloOn.- Habilita el destello
+      * AlarmaDestelloOff.- Deshabilita el destello
+      * AlarmaDestelloGet.- Devuelve el estado del destello
+      * 
       */
       if (oMensaje.Mensaje == "AlarmaEnable")					    //Si se recibe AlarmaEnable
 	  	{
@@ -485,12 +490,7 @@ void setup() {
         DisableAlarma();
 		    cSalida = "AlarmaDisable";
       }  
-      if (oMensaje.Mensaje == "AlarmaDestello")				    //Si se recibe AlarmaDestello
-	  	{
-        //DisableAlarma();
-        Serial.println ("Suuuuuuuuuuuuuuuuuuuuuuuuuuu");
-		    cSalida = "AlarmaDestello";
-      }  
+
       if (oMensaje.Mensaje == "AlarmaGet")							//Si se recibe AlarmaGet
 	  	{
         cSalida = GetAlarma ();
@@ -499,6 +499,24 @@ void setup() {
 		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
         cSalida = String(' ');                          //Limpiamos cSalida 
       }      
+      if (oMensaje.Mensaje == "AlarmaDestelloOn")				    //Si se recibe AlarmaDestelloOn
+	  	{
+        EnableDestello();
+		    cSalida = "AlarmaDestelloOn";
+      }  
+      if (oMensaje.Mensaje == "AlarmaDestelloOff")				    //Si se recibe AlarmaDestelloOff
+	  	{
+        DisableDestello();
+		    cSalida = "AlarmaDestelloOff";
+      }    
+      if (oMensaje.Mensaje == "AlarmaDestelloGet")							//Si se recibe AlarmaDestelloGet
+	  	{
+        cSalida = GetDestello ();
+  			oMensaje.Mensaje = cSalida;								      //Confeccionamos el mensaje a enviar hacia el servidor	
+	  		oMensaje.Destinatario = oMensaje.Remitente;
+		  	EnviaMensaje(oMensaje);									        //Y lo enviamos
+        cSalida = String(' ');                          //Limpiamos cSalida 
+      }             
       /*----------------
       Actualizacion ultimo valor
       ------------------*/

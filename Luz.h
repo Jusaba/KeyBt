@@ -14,6 +14,7 @@
 		#include "Arduino.h"
 
         #include "IO.h"
+		#include "Alarma.h"
 
 		//---------------------------------------
 		//Definiciones y declaracion de variables 
@@ -40,6 +41,7 @@
 		void LuzLocalOn (void);
 		void LuzLocalOff (void);
 		String GetLuzLocal (void) { return ( lLuzLocal ? "1" : "0" ); };
+		void LeeEstadoLuz (byte bConfiguracion);
 		void Luz_Loop ();
 
 
@@ -155,12 +157,36 @@
 			GrabaConfiguracionDispositivo ( PosEnableLuzLocalcfg, lLuzLocal);
 		}
 
+		/**
+		******************************************************
+		* @brief lee el estado de la configuracion de la luz alamacenado en servidor
+		*
+		*/
+		void LeeEstadoLuz (byte bConfiguracion)
+		{
+			if ( bitRead (bConfiguracion, PosEnableLuzCfg ))
+			{
+				lLuz = 1;
+			}else{
+				lLuz = 0;
+			}
+			if ( bitRead (bConfiguracion, PosEnableLuzLocalcfg ))
+			{
+				lLuzLocal = 1;
+			}else{
+				lLuzLocal = 0;
+			}
+		}
+
 		void Luz_Loop (void)
 		{
 				if ( TestTemporizacion ( nMilisegundosDestello,  nTempoDestello ))     //Si ha trancurrido el tiempo de Test de deteccion de los remomtos
     	  		{
-					DestellaLuz();	
-        			nMilisegundosDestello = millis();                                 //Reseteamos el contador de tiempo de destello
+					if ( lAlarma && lDestello )										   //Si la alarma y el destello están habilitados	
+					{
+						DestellaLuz();	
+					}
+					nMilisegundosDestello = millis();                                 //Reseteamos el contador de tiempo de destello
 				}	 
 
 		}

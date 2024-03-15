@@ -227,6 +227,10 @@
 		#ifdef Sirena
 			LeeEstadoSirena (Configuracion);
 		#endif
+		#ifdef Luz
+			LeeEstadoLuz (Configuracion);
+		#endif
+		LeeEstadoAlarma (Configuracion);
 		
 
 	}
