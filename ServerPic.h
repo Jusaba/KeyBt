@@ -6,6 +6,11 @@
 * @version 1.0
 * @date Junio 2021
 *
+* Notas
+*
+* Compilar con 2.0.11 no con 1.0.6 de las camaras
+* En  AsyncWebSocket.cpp:843 cambiar return IPAddress(0U); por IPAddress((uint32_t)0);
+
 *
 *******************************************************/
 

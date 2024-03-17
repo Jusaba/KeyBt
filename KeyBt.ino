@@ -48,57 +48,47 @@ void setup() {
     pinMode (PinSirena, OUTPUT);
   #endif
 
-    if ( LeeByteEprom ( FlagConfiguracion ) == 0 )            //Comprobamos si el Flag de configuracion esta a 0
-    {                                                         // y si esta
-        ModoAP();                                             //Lo ponemos en modo AP
-    }else{                                                    //Si no esta
- 
-        if ( ClienteSTA() )                                   //Lo poenmos en modo STA y nos conectamos a la SSID
-        {                                                     //Si jha conseguido conectarse a ls SSID en modo STA
-            if ( ClienteServerPic () )                        //Intentamos conectar a ServerPic
-            {
-//              CheckFirmware();                              //Comprobamos si el firmware esta actualizado a la ultima version
-                #ifdef Debug
-                    Serial.println(" ");
-                    Serial.println("Conectado al servidor-------------");
-                #endif 
-                #ifdef  PulsadorLed                           //Si no esta definido Debug
-                    ApagaLed();   
-                #endif
-                DataConfig aCfg = EpromToConfiguracion ();   //Leemos la configuracin de la EEprom
-                char USUARIO[1+aCfg.Usuario.length()]; 
-                (aCfg.Usuario).toCharArray(USUARIO, 1+1+aCfg.Usuario.length());          //Almacenamos en el array USUARIO el nombre de usuario 
-                cDispositivo = USUARIO;
-                lHomeKit = aCfg.lHomeKit;
-                lWebSocket = aCfg.lWebSocket;
-                lEstadisticas = aCfg.lEstadisticas;
-                #ifdef KeySlave                              //Si es exclavo, determinamos el nombre del maestro que es igual que el exclavo pero terminado en 'm' 
-                  if ( (cDispositivo).indexOf("_") > 0  )
-                  { 
-                    int nPos_ = (cDispositivo).indexOf("_");
-                    cDispositivoMaestro = ((cDispositivo).substring(0, nPos_))+"m";
-                    #ifdef Debug  
-                      Serial.println("--------------------------");
-                      Serial.println(cDispositivoMaestro);
-                      Serial.println("--------------------------");
-                    #endif
-                  }
-                #endif  
-
-                cKey = GetCodeKey();
-
-                nTiempoTestbtn = TiempoTestbtnOff;
-                if ( lEstadisticas )                                                //Si están habilitadas las estadisticas, actualizamos el numero de inicios
-                {
-                    GrabaVariable ("inicios", 1 + LeeVariable("inicios") );
-                }
-                LeeConfiguracionDispositivo();              //Cargamos el estado de los dispositivos garbado en Servidor
+  if ( LeeByteEprom ( FlagConfiguracion ) == 0 )                            //Comprobamos si el Flag de configuracion esta a 0
+  {                                                                         // y si esta
+      ModoAP();                                                             //Lo ponemos en modo AP
+  }else{                                                                    //Si no esta
+    if ( ClienteSTA() )                                                     //Lo poenmos en modo STA y nos conectamos a la SSID
+    {                                                                       //Si ha conseguido conectarse a ls SSID en modo STA
+      if ( ClienteServerPic () )                                            //Intentamos conectar a ServerPic
+      {
+//          CheckFirmware();                                                //Comprobamos si el firmware esta actualizado a la ultima version
+          #ifdef Debug
+              Serial.println(" ");
+              Serial.println("Conectado al servidor-------------");
+          #endif 
+          #ifdef  PulsadorLed                             
+              ApagaLed();   
+          #endif
+          DataConfig aCfg = EpromToConfiguracion ();                        //Leemos la configuracin de la EEprom
+          char USUARIO[1+aCfg.Usuario.length()]; 
+          (aCfg.Usuario).toCharArray(USUARIO, 1+1+aCfg.Usuario.length());   //Almacenamos en el array USUARIO el nombre de usuario 
+          cDispositivo = USUARIO;
+          lHomeKit = aCfg.lHomeKit;
+          lWebSocket = aCfg.lWebSocket;
+          lEstadisticas = aCfg.lEstadisticas;
+          #ifdef KeySlave                                                  //Si es exclavo, determinamos el nombre del maestro que es igual que el exclavo pero terminado en 'm' 
+            if ( (cDispositivo).indexOf("_") > 0  )
+            { 
+              int nPos_ = (cDispositivo).indexOf("_");
+              cDispositivoMaestro = ((cDispositivo).substring(0, nPos_))+"m";
             }
-        } 
-    }
-
+          #endif  
+          cKey = GetCodeKey();
+          nTiempoTestbtn = TiempoTestbtnOff;                               //Tiempo de escaneo Bluetooth rapido
+          if ( lEstadisticas )                                             //Si están habilitadas las estadisticas, actualizamos el numero de inicios
+          {
+              GrabaVariable ("inicios", 1 + LeeVariable("inicios") );
+          }
+          LeeConfiguracionDispositivo();                                  //Cargamos el estado de los dispositivos garbado en Servidor
+      }
+    } 
+  }
 }
-
 
   void loop ()
   {
@@ -270,7 +260,7 @@ void setup() {
          * GetPir.- Devuelve con 1 o 0 si el Pir está Habilitado o Deshabilitado
          */
 
-          if (oMensaje.Mensaje == "EnablePir")					//Si se recibe EnablePir
+        if (oMensaje.Mensaje == "EnablePir")					//Si se recibe EnablePir
 	  	  {
           EnablePir();
         }  
@@ -278,7 +268,7 @@ void setup() {
 	  	  {
           DisablePir();
         }  
-           if (oMensaje.Mensaje == "EnablePirSirena")		//Si se recibe DisablePir
+        if (oMensaje.Mensaje == "EnablePirSirena")		//Si se recibe DisablePir
 	  	  {      
           EnablePir();
           delay(250);
