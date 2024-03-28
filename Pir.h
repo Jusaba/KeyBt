@@ -21,28 +21,33 @@
 		//Definiciones y declaracion de variables 
 		//---------------------------------------
 
-        #define TiempoNoPir	10000				//Tiempo entre alarmas de pir. Una vez disparada la alrama pir no se dispara otra hasta que no transucrre ese tiempo			
-
-        boolean lPir = 1;	    				//Flag que habilita/Deshabilita el pir
-        boolean lIntPir = 0;					//Flag que con 1 indica si ha habido interrupción de Pir 
-        boolean lIntPirAnterior = 0;			//Flag que sirve para validar la interrupoción una vez en el bucle
-        unsigned long nMilisegundosNoPir = 0;	//Variable que contiene el tiempo entre dispartos del pir
-		#define PosEnablePirCfg	1				//Bit que indica la posicion de EnablePir en el byte de condiguracion
+        #define TiempoNoPir	10000								//Tiempo entre alarmas de pir. Una vez disparada la alrama pir no se dispara otra hasta que no transucrre ese tiempo			
+		#define TiempoSirenaxPir								//Tiempo que sonara la sirana si hay alarma de Pir ( La sirena tiene que estar habilitada y lSirenaLocal tien que estar a 1 )
+        boolean lPir = 1;	    								//Flag que habilita/Deshabilita el pir
+        boolean lIntPir = 0;									//Flag que con 1 indica si ha habido interrupción de Pir 
+        boolean lIntPirAnterior = 0;							//Flag que sirve para validar la interrupoción una vez en el bucle
+		boolean lSirenaLocal = 1;								//Flag que habilita la sirena para que pueda ser activada localmente ( por el pir )
+        unsigned long nMilisegundosNoPir = 0;					//Variable que contiene el tiempo entre dispartos del pir
+		#define PosEnablePirCfg	1								//Bit que indica la posicion de EnablePir en el byte de condiguracion
+		#define PosEnableSirenaLocalCfg	3						//Bit que indica la posicion de EnableSirenaLocal en el byte de condiguracion
 
 
 		//------------------------
 		//Declaracion de funciones 
 		//------------------------
-        void EnablePir (void);
-        void DisablePir (void);
-        String GetPir (void) { return ( lPir ? "1" : "0" ); };
-		void LeeEstadoPir (byte bConfiguracion );
-        void ArmaPir (void);
-        void DesarmaPir (void);
+        void EnablePir (void);									//Habilita el Pir
+        void DisablePir (void);									//Deshabilita el Pir
+        String GetPir (void) { return ( lPir ? "1" : "0" ); };	//Devuelve es estado Habilitado/deshabilitado del Pir (1/0)
+		void LeeEstadoPir (byte bConfiguracion );				//Configura lPir y lSirenaLocal en funcion del bit PosEnablePirCfg y del bit PosEnableSirenaLocalCfg del Byte configuracion
+        void ArmaPir (void);									//Habilita la interrupción del Pir
+        void DesarmaPir (void);									//Deshabilita la interrupción del Pir
+		void SirenaLocalOn (void) ;								//Habilita la sirena para dispararla por detección de Pir
+		void SirenaLocalOff (void) ;							//Deshabilita la sirena para dispararla por detección de Pir
+		String GetSirenaLocal (void) { return ( lSirenaLocal ? "1" : "0" ); };		
 
-		void Pir_Loop (String cDispositivo);
+		void Pir_Loop (String cDispositivo);					//Función de atención del Pir utilizada en Lopp del programa principal
 		
-        void IRAM_ATTR IntPir(void);
+        void IRAM_ATTR IntPir(void);							//Rutina de atención de interrupción del Pir
 
 		//------------------------
 		//Codigo de las funciones 
@@ -74,12 +79,14 @@
 	    void DisablePir (void)
 	    {
 	    	lPir = 0;
+			lSirenaLocal = 0;
 	    	detachInterrupt(digitalPinToInterrupt(PinPir));
+			ModificaConfiguracionDispositivo( PosEnableSirenaLocalCfg, lSirenaLocal);
 			GrabaConfiguracionDispositivo ( PosEnablePirCfg, lPir);			
 	    }    
 		/**
 		******************************************************
-		* @brief configura estado de EnablePir en funcion del Byte configuracion
+		* @brief configura estado de EnablePir y de lSirenaLocal en funcion del Byte configuracion
 		*
 		* @param.- bConfiguracion.- Byte con el contenido de Configuracion
 		*/
@@ -91,6 +98,37 @@
 			}else{
 				lPir = 0;
 			}
+			if ( bitRead (bConfiguracion, PosEnableSirenaLocalCfg ))
+			{
+				lSirenaLocal = 1;
+			}else{
+				lSirenaLocal = 0;
+			}
+
+		}
+   		/**
+	    ******************************************************
+	    * @brief Habilita la sirena para que pueda ser usada localmente ( pir )
+	    *
+	    * Pone a 1 el flag lSirenaLocal 
+	    */
+	    void SirenaLocalOn (void)
+	    {
+	    	lSirenaLocal = 1;
+			ModificaConfiguracionDispositivo(PosEnableSirenaLocalCfg, lSirenaLocal);
+			EnablePir();
+		}
+    	/**
+	    ******************************************************
+	    * @brief Deshabilita la sirena para ser usada localmente ( Pir )
+	    *
+	    * Pone a 0 el flag lSirenaLocal 
+	    */
+	    void SirenaLocalOff (void)
+	    {
+	    	lSirenaLocal = 0;
+			ModificaConfiguracionDispositivo( PosEnableSirenaLocalCfg, lSirenaLocal);
+			EnablePir();
 		}
 		/**********************************
 	    * @brief Arma el Pir
@@ -149,6 +187,7 @@
 	    */
 		void Pir_Loop (String cDispositivo)
 		{
+			
 			if ( lIntPir == 1 &&  !lIntPirAnterior )
     		{
     	  		#ifdef Debug

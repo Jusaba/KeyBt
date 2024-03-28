@@ -21,11 +21,17 @@
 		//---------------------------------------
        	boolean lLuz = 1;	    				    //Flag que habilita/Deshabilita el Luz
 		boolean lLuzLocal = 1;						//Flag que indica si se encendera el Luz junto al sonar la sirena
+		boolean lDestello;							//Flag que indica si hay destello de la luz
+
 		unsigned long nMilisegundosDestello = 0;	//Variable donde se almacenan los msg para el destillo
+		int nTiempoLuzOn;							//variable con segundos que estara la luz encendida
+		long nMilisegundosLuzOn = 0;               	//Variable utilizada para temporizar el tiempo On temporizado de la luz
+		boolean lOnLuzTemporizado = 0;				//Flag que se pone a 1 cuando la luz se pone a On con una temporizacion, se usa para temporizar
 		#define TiempDestello 	 5000			    //Cadencia del destello
 		#define TiempoDestelloFast 200
 		#define PosEnableLuzCfg	4				    //Bit que indica la posicion de EnableLuz en el byte de condiguracion
 		#define PosEnableLuzLocalcfg 5				//Bit que indica si el Luz está ligado a la sirena
+		#define PosEnableDestello 7					//Bit que indica si esta habilitado el destello con la alarma en reposo
 
 		unsigned long nTempoDestello = TiempDestello;
 
@@ -42,6 +48,10 @@
 		void LuzLocalOff (void);
 		String GetLuzLocal (void) { return ( lLuzLocal ? "1" : "0" ); };
 		void LeeEstadoLuz (byte bConfiguracion);
+		void EnableDestello (void);
+        void DisableDestello (void);
+        String GetDestello(void) { return ( lDestello ? "1" : "0" ); };
+		void DestellaLuz (void);
 		void Luz_Loop ();
 
 
@@ -88,6 +98,28 @@
 	    {
 	      	digitalWrite(PinLuz, LOW);	
 	    }
+		/**
+	    ******************************************************
+	    * @brief Habilita el destello
+	    *
+	    * Pone a 1 el flag lAlarma 
+	    */
+	    void EnableDestello (void)
+	    {
+	    	lDestello = 1;
+			GrabaConfiguracionDispositivo ( PosEnableDestello, lDestello);			
+		}
+	    /**
+	    ******************************************************
+	    * @brief Deshabilita el destello
+	    *
+	    * Pone a 0 el flag lPir 
+	    */
+	    void DisableDestello (void)
+	    {
+	    	lDestello = 0;
+			GrabaConfiguracionDispositivo ( PosEnableDestello, lDestello);			
+	    }    
 		
 	    /**
 	    ******************************************************
@@ -176,19 +208,37 @@
 			}else{
 				lLuzLocal = 0;
 			}
+			if ( bitRead (bConfiguracion, PosEnableDestello ))
+			{
+				lDestello = 1;
+			}else{
+				lDestello = 0;
+			}			
 		}
 
 		void Luz_Loop (void)
 		{
-				if ( TestTemporizacion ( nMilisegundosDestello,  nTempoDestello ))     //Si ha trancurrido el tiempo de Test de deteccion de los remomtos
-    	  		{
-					if ( lAlarma && lDestello )										   //Si la alarma y el destello están habilitados	
-					{
-						DestellaLuz();	
-					}
-					nMilisegundosDestello = millis();                                 //Reseteamos el contador de tiempo de destello
-				}	 
 
+			if ( lOnLuzTemporizado )
+			{
+				if (TestTemporizacion( nMilisegundosLuzOn, nTiempoLuzOn * 1000))				//Comprobamos si ha transcurrido el tiempo de temporizacion fijado
+				{																				//Y si ha transcurrido...
+					ApagaLuz();
+			    	cSalida = "LuzOff";						  									//Mandaremos el texto LuzOff como ultimo valor
+					EnviaValor (cSalida);
+					cSalida = String(' ');
+					lOnLuzTemporizado = 0;														//Reseteamos el flag que indica que hay temporizacion					
+				}
+			}else{
+				if (  lDestello )										   						//Si la alarma y el destello están habilitados	
+				{
+					if ( TestTemporizacion ( nMilisegundosDestello,  nTempoDestello ))     		//Si ha trancurrido el tiempo de Test de deteccion de los remotos
+    		  		{
+						DestellaLuz();	
+						nMilisegundosDestello = millis();                                 		//Reseteamos el contador de tiempo de destello
+					}	 
+				}	
+			}
 		}
 
 #endif

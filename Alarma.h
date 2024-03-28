@@ -12,15 +12,17 @@
 #ifndef ALARMA_H
 	#define ALARMA_H
 
+
 		#include "Arduino.h"
+		#ifdef Luz
+			#include "Luz.h"
+		#endif	
 
 		//---------------------------------------
 		//Definiciones y declaracion de variables 
 		//---------------------------------------
        	boolean lAlarma ;	    				    //Flag que habilita/Deshabilita la alarma
-		boolean lDestello;
         #define PosEnableAlarma 6
-		#define PosEnableDestello 7
 		//------------------------
 		//Declaracion de funciones 
 		//------------------------
@@ -28,10 +30,7 @@
 		void EnableAlarma (void);
         void DisableAlarma (void);
         String GetAlarma (void) { return ( lAlarma ? "1" : "0" ); };
-		void EnableDestello (void);
-        void DisableDestello (void);
-        String GetDestello(void) { return ( lDestello ? "1" : "0" ); };
-
+		void Alarma_Loop (void);
 
 		/**
 	    ******************************************************
@@ -53,31 +52,12 @@
 	    void DisableAlarma (void)
 	    {
 	    	lAlarma = 0;
+			#ifdef Luz			
+				lDestello = 0;
+			#endif	
+			ModificaConfiguracionDispositivo ( PosEnableDestello, lDestello);	
 			GrabaConfiguracionDispositivo ( PosEnableAlarma, lAlarma);			
 	    }    
-		/**
-	    ******************************************************
-	    * @brief Habilita el destello
-	    *
-	    * Pone a 1 el flag lAlarma 
-	    */
-	    void EnableDestello (void)
-	    {
-	    	lDestello = 1;
-			GrabaConfiguracionDispositivo ( PosEnableDestello, lDestello);			
-		}
-	    /**
-	    ******************************************************
-	    * @brief Deshabilita el destello
-	    *
-	    * Pone a 0 el flag lPir 
-	    */
-	    void DisableDestello (void)
-	    {
-	    	lDestello = 0;
-			GrabaConfiguracionDispositivo ( PosEnableDestello, lDestello);			
-	    }    
-
 		/**
 		******************************************************
 		* @brief lee el estado de la configuracion de la alarma en servidor
@@ -91,11 +71,10 @@
 			}else{
 				lAlarma = 0;
 			}
-			if ( bitRead (bConfiguracion, PosEnableDestello ))
-			{
-				lDestello = 1;
-			}else{
-				lDestello = 0;
-			}
 		}
+		void Alarma_Loop (void)
+		{
+
+		}
+
 #endif

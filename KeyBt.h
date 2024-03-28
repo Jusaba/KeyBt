@@ -45,26 +45,26 @@
 	    	unsigned long nMiliSegundosInfoRemoto = 0;		//variable para manejar tiempos de envio mensajes de estado al maestro
 	    	#define CiclosNoDetect	1						//Ciclos de no deteccion del slave para considerar que no hay presencia de boton
 	    #endif	
-       	String cDispositivoMaestro = String(' '); 		//Variable donde se almacena el nombre del controlador Master
-														//No se incluye en el  #ifdef KeySlave por que se necesita en el Lopp para llamar a KeyBtr_Loop				
+       	String cDispositivoMaestro = String(' '); 			//Variable donde se almacena el nombre del controlador Master
+															//No se incluye en el  #ifdef KeySlave por que se necesita en el Lopp para llamar a KeyBtr_Loop				
 
-	    boolean lKeyBt = 1;	    				//Flag que habilita/Deshabilita la deteccion de llave bluetooth
-	    int scanTime = 2; 						//Periodo de scaneo
-	    BLEScan *pBLEScan;						//Objeto para el scaneo BLE
-	    boolean lBoton = 0;						//Flag que Indica si la rutina de Scan detecta boton valido en local
-	    boolean lBotonLocal = 0;				//Flag que indica que la baliza ha detectado presencia de boton local ( tiene el contenido de lBoton )
-	    boolean lBotonRemoto = 0;				//Flag que se pone a 1 cuando el master recibe mensaje 'KeyOn' de un remoto. Se resetea cada TiempoTestbtnOnRemoto sg 
-	    boolean lEstadoLocal = 0;				//Flag que indica el estado actual del sistema ( 1 deteccion de presencia )
-	    boolean lEstadoLocalAnterior = 0;		//Flag que indica el estado anterior del sistema  ( para detectar cambio )
-	    unsigned long nMiliSegundosTestbtn = 0;	//Variable utilizada para contabilizar tiempo de comprobacion de presencia
-	    unsigned long nTiempoTestbtn = 0;		//Variable que contiene el tiemp de scaneo ( varia entre TiempoTestbtnOn y TiempoTestbtnOff correspondientes a scaneo lento y rapido)
+	    boolean lKeyBt = 1;	    							//Flag que habilita/Deshabilita la deteccion de llave bluetooth
+	    int scanTime = 2; 									//Periodo de scaneo
+	    BLEScan *pBLEScan;									//Objeto para el scaneo BLE
+	    boolean lBoton = 0;									//Flag que Indica si la rutina de Scan detecta boton valido en local
+	    boolean lBotonLocal = 0;							//Flag que indica que la baliza ha detectado presencia de boton local ( tiene el contenido de lBoton )
+	    boolean lBotonRemoto = 0;							//Flag que se pone a 1 cuando el master recibe mensaje 'KeyOn' de un remoto. Se resetea cada TiempoTestbtnOnRemoto sg 
+	    boolean lEstadoLocal = 0;							//Flag que indica el estado actual del sistema ( 1 deteccion de presencia )
+	    boolean lEstadoLocalAnterior = 0;					//Flag que indica el estado anterior del sistema  ( para detectar cambio )
+	    unsigned long nMiliSegundosTestbtn = 0;				//Variable utilizada para contabilizar tiempo de comprobacion de presencia
+	    unsigned long nTiempoTestbtn = 0;					//Variable que contiene el tiemp de scaneo ( varia entre TiempoTestbtnOn y TiempoTestbtnOff correspondientes a scaneo lento y rapido)
     
-	    int nContador = 0;						//Contador de veces que no se detecta KeyBt para determinar cuando se considera que no hay KeyBt.
-	    										//Esta variable se usa en el master para dar tiempo a lso Esclavos a que refresquen el contador si un Esclavo detecta KeyBt
+	    int nContador = 0;									//Contador de veces que no se detecta KeyBt para determinar cuando se considera que no hay KeyBt.
+	    													//Esta variable se usa en el master para dar tiempo a lso Esclavos a que refresquen el contador si un Esclavo detecta KeyBt
     
-	    String cKey;							//Variable donde se almacena el Code Key, patron de validación de llaves
+	    String cKey;										//Variable donde se almacena el Code Key, patron de validación de llaves
 
-		#define PosEnablekeyBtCfg	0			//Bit que indica la posicion de EnableKeyBt en el byte de condiguracion
+		#define PosEnablekeyBtCfg	0						//Bit que indica la posicion de EnableKeyBt en el byte de condiguracion
 		//------------------------
 		//Declaracion de funciones 
 		//------------------------
@@ -115,96 +115,90 @@
 		}	
 
 
-	/**
-	******************************************************
-	* @brief clase heredada de BLEAdvertisedDeviceCallbacks para personalizar la respuesta de un cliente bt
-	*
-	* Se lee la informacion que proviene del cliente bluetooth y se comprueba si es un boton registrado llamando a TestIbeacomRegistrado()
-	* En caso de que TestIbeacomRegistrado() identifique un boton valido, TestIbeacomRegistrado() pone flag lBoton a 1 para indicar que se detecta boton 
-	* En el programa principal, despues de llamar a TestCambioEstado() se debe resetear este flag
-	*/
-	class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
-	{
-    	void onResult(BLEAdvertisedDevice advertisedDevice)
+		/**
+		******************************************************
+		* @brief clase heredada de BLEAdvertisedDeviceCallbacks para personalizar la respuesta de un cliente bt
+		*
+		* Se lee la informacion que proviene del cliente bluetooth y se comprueba si es un boton registrado llamando a TestIbeacomRegistrado()
+		* En caso de que TestIbeacomRegistrado() identifique un boton valido, TestIbeacomRegistrado() pone flag lBoton a 1 para indicar que se detecta boton 
+		* En el programa principal, despues de llamar a TestCambioEstado() se debe resetear este flag
+		*/
+		class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 		{
-			if (advertisedDevice.haveManufacturerData() == true)			//Si hay datos de fabricante
+    		void onResult(BLEAdvertisedDevice advertisedDevice)
 			{
-				TestIbeacomRegistrado ( advertisedDevice );					//Analizamos si es un boton registrado
-			}			
-        	return;
-    	}
+				if (advertisedDevice.haveManufacturerData() == true)			//Si hay datos de fabricante
+				{
+					TestIbeacomRegistrado ( advertisedDevice );					//Analizamos si es un boton registrado
+				}			
+    	    	return;
+    		}
+		};
 
-	};
 
-
-	/**
-	******************************************************
-	* @brief Funcion que valida los botones registrados
-	*
-	* Si se detecta un boton valido poen a 1 el flag lBoton ( Ojo, leer descripcion de BLEAdvertisedDeviceCallbacks para ver como reponer flag)
-	* Para la comprobacion de si es boton valido lo primero que ira es que la trama sea de un dispositivo iBeacom
-	* y leugo mira si la trama lleva el codigo cKey
-	*
-	* @param advertisedDevice.- Objeto BLEAdvertisedDevice recibido en BLEAdvertisedDeviceCallbacks
-	* 
-	* La UUID Adoptada para reconocimiento es
-	*	05501230380491191231010060190824 que se traduce a  24081960-0001-3112-1991-043830125005
-	*   05501230380491191231010091191231
-	*   05501230380491191231010091191231
-	*
-	* @return Devuelve 1 si se es boton registrado, 0 en caso contrario
-	*/	
-	boolean TestIbeacomRegistrado (BLEAdvertisedDevice advertisedDevice)
-	{
-		boolean lSalida = 0;
-		std::string strManufacturerData = advertisedDevice.getManufacturerData();
-		uint8_t cManufacturerData[100];
-		strManufacturerData.copy((char *)cManufacturerData, strManufacturerData.length(), 0);
-		//Si es ibeacom ( Apple )
-		if (strManufacturerData.length() == 25 && cManufacturerData[0] == 0x4C && cManufacturerData[1] == 0x00)	
-		{		
-			BLEBeacon oBeacon = BLEBeacon();
-			//Leemos la trama iBeacom
-			oBeacon.setData(strManufacturerData);
-			//Extraemos de la trama el UUID
-			String cUUID = oBeacon.getProximityUUID().toString().c_str();
-			cUUID = InvierteUUID(cUUID);	//Invertimos cUUID	
-
-			//Si el UUID contiene el texto cKey se trata de un boton para detectar presencia
-			if (cUUID.indexOf(cKey) > 0)
-			{
-				lBoton=1;					//Ponemos a 1 el flag de detección boton
-				lSalida = 1;				//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
-				#ifdef Debug
-					printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
-				#endif				
-			}
-
-			//------------------------
-			//Boton HelytIot averiados
-			//------------------------			
-			if(ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 256 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 25 )
-			{
-				lBoton=1; 			//Ponemos a 1 el flag de detección boton
-				lSalida = 1;		//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
-				#ifdef Debug
-					printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
-				#endif
-			}
-			
-			
-			if(ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 1011 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 19641)  
-			{
-				lBoton=1; 			//Ponemos a 1 el flag de detección boton
-				lSalida = 1;		//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
-				#ifdef Debug
-					printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
-				#endif
-			}
-			
-		}	
-		return (lSalida);
-	}
+		/**
+		******************************************************
+		* @brief Funcion que valida los botones registrados
+		*
+		* Si se detecta un boton valido poen a 1 el flag lBoton ( Ojo, leer descripcion de BLEAdvertisedDeviceCallbacks para ver como reponer flag)
+		* Para la comprobacion de si es boton valido lo primero que ira es que la trama sea de un dispositivo iBeacom
+		* y leugo mira si la trama lleva el codigo cKey
+		*
+		* @param advertisedDevice.- Objeto BLEAdvertisedDevice recibido en BLEAdvertisedDeviceCallbacks
+		* 
+		* La UUID Adoptada para reconocimiento es
+		*	05501230380491191231010060190824 que se traduce a  24081960-0001-3112-1991-043830125005
+		*   05501230380491191231010091191231
+		*   05501230380491191231010091191231
+		*
+		* @return Devuelve 1 si se es boton registrado, 0 en caso contrario
+		*/	
+		boolean TestIbeacomRegistrado (BLEAdvertisedDevice advertisedDevice)
+		{
+			boolean lSalida = 0;
+			std::string strManufacturerData = advertisedDevice.getManufacturerData();
+			uint8_t cManufacturerData[100];
+			strManufacturerData.copy((char *)cManufacturerData, strManufacturerData.length(), 0);
+			//Si es ibeacom ( Apple )
+			if (strManufacturerData.length() == 25 && cManufacturerData[0] == 0x4C && cManufacturerData[1] == 0x00)	
+			{		
+				BLEBeacon oBeacon = BLEBeacon();
+				//Leemos la trama iBeacom
+				oBeacon.setData(strManufacturerData);
+				//Extraemos de la trama el UUID
+				String cUUID = oBeacon.getProximityUUID().toString().c_str();
+				cUUID = InvierteUUID(cUUID);	//Invertimos cUUID	
+				//Si el UUID contiene el texto cKey se trata de un boton para detectar presencia
+				if (cUUID.indexOf(cKey) > 0)
+				{
+					lBoton=1;					//Ponemos a 1 el flag de detección boton
+					lSalida = 1;				//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
+					#ifdef Debug
+						printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
+					#endif				
+				}
+				//------------------------
+				//Boton HelytIot averiados
+				//------------------------			
+				if(ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 256 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 25 )
+				{
+					lBoton=1; 			//Ponemos a 1 el flag de detección boton
+					lSalida = 1;		//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
+					#ifdef Debug
+						printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
+					#endif
+				}
+				if(ENDIAN_CHANGE_U16(oBeacon.getMajor()) == 1011 && ENDIAN_CHANGE_U16(oBeacon.getMinor()) == 19641)  
+				{
+					lBoton=1; 			//Ponemos a 1 el flag de detección boton
+					lSalida = 1;		//Ponemos el flag de salida a 1 para indicar que se ha detectado boton
+					#ifdef Debug
+						printcUUID	(cUUID, oBeacon, advertisedDevice)	;		
+					#endif
+				}
+			}	
+			return (lSalida);
+		}
 	/**
 	******************************************************
 	* @brief Invierte una cadena UUID
